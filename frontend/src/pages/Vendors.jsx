@@ -3,7 +3,7 @@ import { AppContext } from '../context/AppContext';
 import { Plus, Search, Eye, X, Filter } from 'lucide-react';
 
 const Vendors = () => {
-  const { vendors, addVendor, logActivity, showToast } = useContext(AppContext);
+  const { vendors, addVendor, updateVendorStatus, showToast } = useContext(AppContext);
 
   // Filter & Search states
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,15 +46,9 @@ const Vendors = () => {
   };
 
   // Modify vendor status helper
-  const updateVendorStatus = (vendorId, nextStatus) => {
-    // Modify in-place for local state demonstration
-    const v = vendors.find(vend => vend.id === vendorId);
-    if (v) {
-      v.status = nextStatus;
-      logActivity('Vendor Status Updated', 'Vendor', `Vendor '${v.name}' status updated to ${nextStatus}`);
-      showToast(`Vendor status updated to ${nextStatus}.`);
-      setSelectedVendor(null);
-    }
+  const handleStatusUpdate = async (vendorId, nextStatus) => {
+    await updateVendorStatus(vendorId, nextStatus);
+    setSelectedVendor(null);
   };
 
   // Filtering Logic
@@ -315,21 +309,21 @@ const Vendors = () => {
               <p style={{ ...detailLabelStyle, marginBottom: '0.5rem' }}>Update Business Status</p>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button 
-                  onClick={() => updateVendorStatus(selectedVendor.id, 'Active')}
+                  onClick={() => handleStatusUpdate(selectedVendor.id, 'Active')}
                   className="btn btn-teal btn-sm"
                   disabled={selectedVendor.status === 'Active'}
                 >
                   Approve / Active
                 </button>
                 <button 
-                  onClick={() => updateVendorStatus(selectedVendor.id, 'Pending')}
+                  onClick={() => handleStatusUpdate(selectedVendor.id, 'Pending')}
                   className="btn btn-secondary btn-sm"
                   disabled={selectedVendor.status === 'Pending'}
                 >
                   Set to Pending
                 </button>
                 <button 
-                  onClick={() => updateVendorStatus(selectedVendor.id, 'Blocked')}
+                  onClick={() => handleStatusUpdate(selectedVendor.id, 'Blocked')}
                   className="btn btn-danger btn-sm"
                   disabled={selectedVendor.status === 'Blocked'}
                 >

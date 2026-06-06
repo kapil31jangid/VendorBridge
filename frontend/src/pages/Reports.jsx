@@ -166,7 +166,8 @@ const topButtonStyle = {
 
 const kpiCardStyle = {
   flex: 1,
-  border: '1px solid',
+  borderWidth: '1px',
+  borderStyle: 'solid',
   borderRadius: 'var(--radius-md)',
   padding: '1.5rem 1rem',
   display: 'flex',
