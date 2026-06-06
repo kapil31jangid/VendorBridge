@@ -1,9 +1,9 @@
 import cors from "cors";
 import express from "express";
 import { ensureRepository, getProviderName } from "./data/repository.js";
-import { authRouter } from "./routes/auth.js";
-import { resourceRouter } from "./routes/resources.js";
-import { workflowRouter } from "./routes/workflow.js";
+import { authRouter } from "./api/auth.js";
+import { resourceRouter } from "./api/resources.js";
+import { workflowRouter } from "./api/workflow.js";
 
 export function createApp() {
   const app = express();
