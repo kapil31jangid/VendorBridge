@@ -262,10 +262,7 @@ const stepsIndicatorContainerStyle = {
 const stepContainerStyle = {
   display: 'flex',
   alignItems: 'center',
-  flex: 1,
-  ':last-child': {
-    flex: 'none'
-  }
+  flex: 1
 };
 
 const stepCircleStyle = (isActive) => ({

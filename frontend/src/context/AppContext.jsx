@@ -4,13 +4,19 @@ export const AppContext = createContext();
 
 // Set to true to seed the ERP with mock data for standalone/offline presentation.
 // Set to false to start with clean database/API connection.
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const TOKEN_STORAGE_KEY = 'vendorbridge.token';
+const USER_STORAGE_KEY = 'vendorbridge.user';
 
 export const AppProvider = ({ children }) => {
   // Authentication & Session
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY) || '');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -38,6 +44,7 @@ export const AppProvider = ({ children }) => {
       const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           ...options.headers,
         },
         ...options,
@@ -53,9 +60,25 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    if (authToken) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, authToken);
+    } else {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  }, [authToken]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+  }, [currentUser]);
+
   // Fetch initial data from the PostgreSQL API endpoints on load
   useEffect(() => {
-    if (USE_MOCK_DATA) return;
+    if (USE_MOCK_DATA || !authToken) return;
 
     const loadAllData = async () => {
       setIsLoading(true);
@@ -91,10 +114,23 @@ export const AppProvider = ({ children }) => {
     };
 
     loadAllData();
-  }, []);
+  }, [authToken]);
+
+  useEffect(() => {
+    if (USE_MOCK_DATA || !authToken || currentUser) return;
+
+    const restoreSession = async () => {
+      const sessionResult = await apiFetch('/auth/me');
+      if (sessionResult?.user) {
+        setCurrentUser(sessionResult.user);
+      }
+    };
+
+    restoreSession();
+  }, [authToken, currentUser]);
 
   // Helper: Log Activity (PostgreSQL triggers will guarantee database-level immutability)
-  const logActivity = async (action, category, details, userId = currentUser?.id || 1) => {
+  const logActivity = async (action, category, details, userId = currentUser?.id || 1, tokenOverride = authToken) => {
     const newLog = {
       id: Date.now(),
       user_id: userId,
@@ -104,9 +140,16 @@ export const AppProvider = ({ children }) => {
       timestamp: new Date().toISOString()
     };
 
-    // Keep endpoint open
+    if (!tokenOverride) {
+      setActivityLogs(prev => [newLog, ...prev]);
+      return;
+    }
+
     const serverResult = await apiFetch('/activity-logs', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokenOverride}`
+      },
       body: JSON.stringify(newLog)
     });
 
@@ -123,8 +166,11 @@ export const AppProvider = ({ children }) => {
     });
 
     if (authResult && authResult.user) {
+      if (authResult.token) {
+        setAuthToken(authResult.token);
+      }
       setCurrentUser(authResult.user);
-      logActivity('User Logged In', 'Auth', `User ${authResult.user.first_name} ${authResult.user.last_name} (${authResult.user.role}) logged in`, authResult.user.id);
+      logActivity('User Logged In', 'Auth', `User ${authResult.user.first_name} ${authResult.user.last_name} (${authResult.user.role}) logged in`, authResult.user.id, authResult.token);
       showToast(`Welcome back, ${authResult.user.first_name}!`);
       return true;
     }
@@ -134,6 +180,7 @@ export const AppProvider = ({ children }) => {
                  MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (user) {
       setCurrentUser(user);
+      setAuthToken('');
       logActivity('User Logged In', 'Auth', `User ${user.first_name} ${user.last_name} (${user.role}) logged in (Offline Fallback)`, user.id);
       showToast(`Welcome back, ${user.first_name}! (Offline Mode)`);
       return true;
@@ -147,6 +194,7 @@ export const AppProvider = ({ children }) => {
     if (currentUser) {
       logActivity('User Logged Out', 'Auth', `User ${currentUser.first_name} logged out`, currentUser.id);
       setCurrentUser(null);
+      setAuthToken('');
       setActiveTab('login');
       showToast('Logged out successfully.');
     }
@@ -161,11 +209,11 @@ export const AppProvider = ({ children }) => {
       body: JSON.stringify(newUser)
     });
 
-    const savedUser = serverResult || newUser;
+    const savedUser = serverResult?.user || serverResult || newUser;
     setUsers(prev => [...prev, savedUser]);
     
     // If user registers as a Vendor, automatically create vendor record
-    if (userData.role === 'Vendor') {
+    if (userData.role === 'Vendor' && !serverResult?.user) {
       const newVendorId = 100 + newId;
       const newVendor = {
         id: newVendorId,
@@ -209,6 +257,24 @@ export const AppProvider = ({ children }) => {
     setVendors(prev => [...prev, savedVendor]);
     logActivity('Vendor Added', 'Vendor', `Vendor '${savedVendor.name}' registered manually`, currentUser?.id);
     showToast(`Vendor '${savedVendor.name}' added successfully.`);
+  };
+
+  const updateVendorStatus = async (vendorId, nextStatus) => {
+    const serverResult = await apiFetch(`/vendors/${vendorId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: nextStatus })
+    });
+
+    setVendors(prev => prev.map(vendor => {
+      if (vendor.id !== vendorId) return vendor;
+      return serverResult || { ...vendor, status: nextStatus };
+    }));
+
+    const updatedVendor = vendors.find(vendor => vendor.id === vendorId);
+    if (updatedVendor) {
+      logActivity('Vendor Status Updated', 'Vendor', `Vendor '${updatedVendor.name}' status updated to ${nextStatus}`, currentUser?.id);
+    }
+    showToast(`Vendor status updated to ${nextStatus}.`);
   };
 
   // RFQ Functions
@@ -297,6 +363,7 @@ export const AppProvider = ({ children }) => {
           method: 'PUT',
           body: JSON.stringify({ status: 'L2 Review' })
         });
+        setRfqs(prev => prev.map(r => r.id === rfqId ? { ...r, status: 'L2 Review' } : r));
         logActivity('L1 Approval Approved', 'Approval', `Quotation #${quotationId} approved at L1 stage.`, currentUser?.id);
         showToast(`L1 approved for Quotation #${quotationId}.`);
       } else if (step === 'L2') {
@@ -317,6 +384,7 @@ export const AppProvider = ({ children }) => {
             po_number: poNum,
             rfq_id: rfqId,
             quotation_id: quotationId,
+            date: new Date().toISOString().split('T')[0],
             created_by: currentUser?.id || 1,
             created_at: new Date().toISOString()
           };
@@ -420,6 +488,7 @@ export const AppProvider = ({ children }) => {
         processApproval,
         payInvoice,
         sendEmail,
+        updateVendorStatus,
         logActivity
       }}
     >
