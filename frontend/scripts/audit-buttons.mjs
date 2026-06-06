@@ -140,6 +140,23 @@ async function audit() {
   }
 
   try {
+    await clickByText(page, "+ add vendor", { exact: true });
+    await page.locator('button[aria-label^="Remove "]').first().waitFor({ state: "visible", timeout: 5000 });
+    record("rfq add vendor", "pass");
+  } catch (error) {
+    record("rfq add vendor", "fail", error.message.split("\n")[0]);
+  }
+
+  try {
+    await clickByText(page, "Save & Send to Vendors", { exact: true });
+    await expectVisible(page, "created successfully", "rfq save/send with vendor");
+  } catch (error) {
+    record("rfq save/send with vendor", "fail", error.message.split("\n")[0]);
+  }
+
+  await clickNav(page, "RFQ's");
+
+  try {
     await clickByText(page, "Save as Draft", { exact: true });
     await expectVisible(page, "created successfully", "rfq save draft");
   } catch (error) {

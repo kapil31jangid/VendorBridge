@@ -255,6 +255,33 @@ async function seedIfEmpty(client) {
   return true;
 }
 
+async function resetSerialSequences(client) {
+  const tables = [
+    "users",
+    "vendors",
+    "rfqs",
+    "rfq_items",
+    "quotations",
+    "quotation_items",
+    "approvals",
+    "purchase_orders",
+    "invoices",
+    "activity_logs",
+    "sent_emails"
+  ];
+
+  for (const table of tables) {
+    await client.query(
+      `SELECT setval(
+        pg_get_serial_sequence($1, 'id'),
+        COALESCE((SELECT MAX(id) FROM ${quoteIdentifier(table)}), 0) + 1,
+        false
+      )`,
+      [table]
+    );
+  }
+}
+
 async function main() {
   if (!isPostgresMode()) {
     console.log("DATA_PROVIDER is not set to postgres. Skipping PostgreSQL initialization.");
@@ -289,6 +316,7 @@ async function main() {
     await client.query("BEGIN");
     await client.query(schemaSql);
     const seeded = await seedIfEmpty(client);
+    await resetSerialSequences(client);
     await client.query("COMMIT");
     console.log(seeded ? "PostgreSQL schema created and seed data inserted." : "PostgreSQL schema verified; seed data already present.");
   } catch (error) {
