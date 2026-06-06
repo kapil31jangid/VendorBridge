@@ -2,6 +2,12 @@ import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { X } from 'lucide-react';
 
+const fallbackRfqVendors = [
+  { id: 101, name: 'Infra Supplies Ltd', status: 'Active' },
+  { id: 102, name: 'TechCore IT Solutions', status: 'Active' },
+  { id: 103, name: 'Office Need Co', status: 'Active' }
+];
+
 const CreateRFQ = () => {
   const { vendors, createRFQ, setActiveTab } = useContext(AppContext);
 
@@ -19,6 +25,10 @@ const CreateRFQ = () => {
   ]);
 
   const [assignedVendorIds, setAssignedVendorIds] = useState([]);
+
+  const vendorOptions = vendors.length > 0 ? vendors : fallbackRfqVendors;
+  const assignedVendors = vendorOptions.filter(vendor => assignedVendorIds.some(id => String(id) === String(vendor.id)));
+  const availableVendors = vendorOptions.filter(vendor => !assignedVendorIds.some(id => String(id) === String(vendor.id)));
 
   // Change basic detail handler
   const handleDetailChange = (e) => {
@@ -38,11 +48,21 @@ const CreateRFQ = () => {
 
   // Vendor assignment
   const toggleVendorSelection = (vendorId) => {
-    if (assignedVendorIds.includes(vendorId)) {
-      setAssignedVendorIds(assignedVendorIds.filter(id => id !== vendorId));
+    if (assignedVendorIds.some(id => String(id) === String(vendorId))) {
+      setAssignedVendorIds(assignedVendorIds.filter(id => String(id) !== String(vendorId)));
     } else {
       setAssignedVendorIds([...assignedVendorIds, vendorId]);
     }
+  };
+
+  const addNextVendor = () => {
+    const nextVendor = availableVendors.find(vendor => vendor.status !== 'Blocked') || availableVendors[0];
+    if (!nextVendor) {
+      alert(assignedVendorIds.length > 0 ? 'All vendors are already assigned.' : 'No vendor records are available.');
+      return;
+    }
+
+    toggleVendorSelection(nextVendor.id);
   };
 
   const handleDispatch = (status = 'Active') => {
@@ -215,14 +235,28 @@ const CreateRFQ = () => {
           <div style={sectionContainerStyle}>
             <h3 style={sectionTitleStyle}>ASSIGN VENDORS</h3>
             <div style={assignedVendorsBoxStyle}>
-              <div style={assignedVendorTagStyle}>
-                Infra Supplies Pvt ltd <button style={tagRemoveBtnStyle}><X size={12} /></button>
-              </div>
-              <div style={assignedVendorTagStyle}>
-                Techcore LTD <button style={tagRemoveBtnStyle}><X size={12} /></button>
-              </div>
+              {assignedVendors.length > 0 ? assignedVendors.map(vendor => (
+                <div key={vendor.id} style={assignedVendorTagStyle}>
+                  {vendor.name}
+                  <button
+                    type="button"
+                    style={tagRemoveBtnStyle}
+                    onClick={() => toggleVendorSelection(vendor.id)}
+                    aria-label={`Remove ${vendor.name}`}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )) : (
+                <div style={emptyVendorStyle}>No vendors assigned yet.</div>
+              )}
             </div>
-            <button className="btn btn-outline" style={{...smallButtonStyle, marginTop: '0.5rem', width: '100%', textAlign: 'left', display: 'block', border: '1px solid var(--text-secondary)'}}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{...smallButtonStyle, marginTop: '0.5rem', width: '100%', textAlign: 'left', display: 'block', border: '1px solid var(--text-secondary)'}}
+              onClick={addNextVendor}
+            >
               + add vendor
             </button>
           </div>
@@ -397,6 +431,11 @@ const assignedVendorTagStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   fontSize: '0.9rem'
+};
+
+const emptyVendorStyle = {
+  color: 'var(--text-secondary)',
+  fontSize: '0.85rem'
 };
 
 const tagRemoveBtnStyle = {

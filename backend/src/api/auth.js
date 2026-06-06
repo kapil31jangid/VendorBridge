@@ -2,12 +2,13 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import { signAccessToken } from "../auth/jwt.js";
 import { createUser, findUserByEmail, findUserById } from "../data/repository.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 import { requireAuth } from "../middleware/auth.js";
 import { sanitizeUser } from "../store.js";
 
 export const authRouter = express.Router();
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required." });
@@ -27,9 +28,9 @@ authRouter.post("/login", async (req, res) => {
   const token = signAccessToken(safeUser);
 
   res.json({ user: safeUser, token });
-});
+}));
 
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", asyncHandler(async (req, res) => {
   const payload = req.body || {};
   if (!payload.first_name || !payload.email || !payload.role) {
     return res.status(400).json({ error: "first_name, email, and role are required." });
@@ -39,9 +40,9 @@ authRouter.post("/register", async (req, res) => {
   const safeUser = sanitizeUser(createdUser);
   const token = signAccessToken(safeUser);
   res.status(201).json({ user: safeUser, token });
-});
+}));
 
-authRouter.get("/me", requireAuth, async (req, res) => {
+authRouter.get("/me", requireAuth, asyncHandler(async (req, res) => {
   const user = await findUserById(req.auth.sub);
 
   if (!user) {
@@ -49,4 +50,4 @@ authRouter.get("/me", requireAuth, async (req, res) => {
   }
 
   res.json({ user: sanitizeUser(user) });
-});
+}));

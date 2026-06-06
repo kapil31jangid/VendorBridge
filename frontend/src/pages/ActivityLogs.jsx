@@ -14,11 +14,11 @@ const ActivityLogs = () => {
   // Filtering logs
   const filteredLogs = activityLogs.filter(log => {
     if (activeFilter === 'All') return true;
-    return log.category.toLowerCase() === activeFilter.toLowerCase();
+    return String(log.category || '').toLowerCase() === activeFilter.toLowerCase();
   });
 
   const getBadgeClass = (category) => {
-    const cat = category.toLowerCase();
+    const cat = String(category || '').toLowerCase();
     if (cat === 'auth') return 'badge-warning';
     if (cat === 'rfq') return 'badge-info';
     if (cat === 'approval') return 'badge-success';
@@ -61,18 +61,22 @@ const ActivityLogs = () => {
             // Wireframe matching icons based on hardcoded examples or categories
             let IconComp = History;
             let iconColor = 'var(--text-primary)';
-            const actionText = log.action.toLowerCase();
+            const actionText = String(log.action || '').toLowerCase();
+            const category = String(log.category || '');
+            const action = String(log.action || 'Activity recorded');
+            const details = String(log.details || '');
+            const timestamp = log.timestamp || log.created_at || new Date().toISOString();
             
-            if (actionText.includes('selected') || log.category === 'Approval' && log.action.includes('Approved')) {
+            if (actionText.includes('selected') || category === 'Approval' && action.includes('Approved')) {
               IconComp = ShieldCheck;
               iconColor = '#14b8a6'; // green
             } else if (actionText.includes('pending') || actionText.includes('awaiting')) {
               IconComp = History; // clock-like
               iconColor = '#3b82f6'; // blue
-            } else if (actionText.includes('published') || log.category === 'RFQ') {
+            } else if (actionText.includes('published') || category === 'RFQ') {
               IconComp = Info; // document-like
               iconColor = '#f59e0b'; // orange/white
-            } else if (actionText.includes('added') || actionText.includes('registered') || log.category === 'Vendor') {
+            } else if (actionText.includes('added') || actionText.includes('registered') || category === 'Vendor') {
               IconComp = User;
               iconColor = '#ec4899'; // pink
             }
@@ -84,10 +88,10 @@ const ActivityLogs = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                    {log.action} {log.details ? `- ${log.details.toLowerCase()}` : ''}
+                    {action} {details ? `- ${details.toLowerCase()}` : ''}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {new Date(log.timestamp).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                    {new Date(timestamp).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
                   </div>
                 </div>
               </div>
@@ -115,7 +119,9 @@ const tabContainerStyle = {
 
 const tabStyle = {
   backgroundColor: 'transparent',
-  border: '1px solid var(--text-primary)',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'var(--text-primary)',
   padding: '0.4rem 1.5rem',
   cursor: 'pointer',
   color: 'var(--text-primary)',
