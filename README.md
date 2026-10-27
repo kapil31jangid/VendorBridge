@@ -1,143 +1,200 @@
-# SDEMS — Secure Digital Document Management System
+<div align="center">
 
-> Smart India Hackathon 2026 submission-style documentation for the `kapil31jangid/VendorBridge` repository.
+# VendorBridge
 
-## Smart India Hackathon 2026 Context
+### Procurement workflow platform connecting internal teams and vendors across RFQ → quotation → approval → PO → invoice
 
-| Field | Value |
+![Status](https://img.shields.io/badge/status-active%20prototype-2563eb)
+![Frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite%208-61dafb)
+![Backend](https://img.shields.io/badge/backend-Express%204-000000)
+![Data](https://img.shields.io/badge/data-PostgreSQL%20%7C%20JSON-336791)
+![Tests](https://img.shields.io/badge/tests-node:test-0f172a)
+
+</div>
+
+VendorBridge is a full-stack ERP-style procurement application for managing vendor onboarding, RFQs, quotations, approvals, purchase orders, invoices, and activity logs. The codebase includes a React frontend, an Express API backend, and dual persistence modes (PostgreSQL or local JSON fallback).
+
+---
+
+## Table of Contents
+
+- [Executive Overview](#executive-overview)
+- [Problem vs Solution](#problem-vs-solution)
+- [Architecture](#architecture)
+- [Technical Stack](#technical-stack)
+- [Core Features and Workflows](#core-features-and-workflows)
+- [Security, Access Control, and Data Integrity](#security-access-control-and-data-integrity)
+- [Current Implementation vs Roadmap](#current-implementation-vs-roadmap)
+- [Feasibility, Limitations, and Mitigations](#feasibility-limitations-and-mitigations)
+- [Stakeholder Benefits](#stakeholder-benefits)
+- [Repository Structure](#repository-structure)
+- [Local Setup](#local-setup)
+- [Environment Configuration](#environment-configuration)
+- [Scripts and Commands](#scripts-and-commands)
+- [Testing and Verification](#testing-and-verification)
+- [Contribution and Support](#contribution-and-support)
+- [License](#license)
+
+---
+
+## Executive Overview
+
+Procurement operations often break down across disconnected spreadsheets, manual approvals, and email chains. VendorBridge centralizes these steps into one workflow-oriented product where teams can:
+
+- manage vendors and RFQs,
+- collect and compare quotations,
+- run L1/L2-style approvals,
+- generate purchase-order and invoice records,
+- track activity and summary analytics.
+
+The backend exposes REST endpoints for these resources and workflow transitions, while the frontend provides role-aware screens for Officer, Manager, Admin, and Vendor users.
+
+## Problem vs Solution
+
+| Problem | VendorBridge approach |
 |---|---|
-| Hackathon | Smart India Hackathon (SIH) 2026 |
-| Problem Statement ID | **26190** |
-| Problem Title | **Secure Digital Document Management System for Legal and Investigation Documents** |
-| Theme / Category | Smart Automation / GovTech (documentation-aligned) |
-| Team Name | **ThreeSixNine** |
-| Solution Branding | **SDEMS** |
-| Repository | [`kapil31jangid/VendorBridge`](./) |
-
----
-
-## Project Overview
-
-This repository contains a full-stack prototype that can be presented in **SDEMS style** for SIH 2026:
-
-- `frontend/`: React + Vite dashboard and workflow UI
-- `backend/`: Express REST API with JWT authentication, role checks, workflow transitions, and analytics summary
-- Persistence modes:
-  - `postgres` (production-like mode with schema + seed + DB constraints)
-  - `json` (local/demo fallback mode)
-
-> Note: The current codebase uses domain entities such as vendors, RFQs, quotations, approvals, purchase orders, invoices, and activity logs. In SIH/SDEMS framing, these represent secure document lifecycle records and approval workflows.
-
----
+| Vendor/procurement data scattered across tools | Unified frontend + API resource model (`vendors`, `rfqs`, `quotations`, `approvals`, `purchase-orders`, `invoices`, `activity-logs`, `emails`) |
+| Manual approval handoffs are hard to trace | Explicit workflow endpoints for status transitions, quotation selection, and invoice payment |
+| Inconsistent access boundaries | JWT authentication + role-based route restrictions on backend and role-filtered navigation in frontend |
+| Local demos/testing vs production-like runtime needs | Switchable persistence: `DATA_PROVIDER=json` fallback or `DATA_PROVIDER=postgres` for database-backed operation |
 
 ## Architecture
 
-### High-Level Architecture
+### High-level architecture
 
 ```mermaid
 flowchart TD
-  U[Authorized User] --> FE[Frontend: React + Vite]
-  FE -->|HTTPS JSON| API[Backend: Express REST API]
-  API --> AUTH[Auth Layer\nJWT + Role Middleware]
-  API --> WF[Workflow APIs\nstatus updates, selection, payment]
-  API --> DATA[Repository Layer]
-  DATA -->|DATA_PROVIDER=postgres| PG[(PostgreSQL)]
-  DATA -->|DATA_PROVIDER=json| JSON[(Local JSON Store)]
-  API --> AUDIT[Activity Logs + Email Records]
+  User[User (Officer/Manager/Admin/Vendor)] --> FE[Frontend: React + Vite]
+  FE -->|HTTP JSON API| BE[Backend: Express]
+  BE --> AUTH[JWT Auth + Role Middleware]
+  BE --> API[Resource + Workflow Routes]
+  API --> REPO[Repository Layer]
+  REPO -->|DATA_PROVIDER=postgres| PG[(PostgreSQL)]
+  REPO -->|DATA_PROVIDER=json| JSON[(Local db.json store)]
 ```
 
-### Core Request Flow
+### Typical request flow
 
 ```mermaid
 sequenceDiagram
-  participant User
-  participant Frontend
+  participant U as User
+  participant FE as Frontend
   participant API as Express API
-  participant Repo as Repository Layer
-  participant DB as Postgres/JSON
+  participant R as Repository
+  participant D as Postgres/JSON
 
-  User->>Frontend: Login
-  Frontend->>API: POST /api/auth/login
-  API->>Repo: findUserByEmail()
-  Repo->>DB: Read user
-  DB-->>Repo: User + credentials
-  Repo-->>API: Validated user
-  API-->>Frontend: JWT + user profile
+  U->>FE: Login
+  FE->>API: POST /api/auth/login
+  API->>R: findUserByEmail()
+  R->>D: Fetch user
+  D-->>R: User record
+  R-->>API: User
+  API-->>FE: JWT + sanitized user
 
-  Frontend->>API: GET /api/rfqs (with Authorization header)
-  API->>API: requireAuth + requireRole
-  API->>Repo: listResource("rfqs")
-  Repo->>DB: Query RFQs
-  DB-->>Repo: RFQ records
-  Repo-->>API: Normalized payload
-  API-->>Frontend: RFQ list
+  FE->>API: GET /api/rfqs (******
+  API->>API: requireAuth + role checks
+  API->>R: listResource('rfqs')
+  R->>D: Read RFQs + related items/vendors
+  D-->>API: RFQ payload
+  API-->>FE: RFQ list
 ```
-
----
-
-## Current Functional Scope (Code-Backed)
-
-### Implemented API Modules
-
-- **Auth**: login, register, session user (`/api/auth/login`, `/api/auth/register`, `/api/auth/me`)
-- **Resource collections**: users, vendors, rfqs, quotations, approvals, purchase-orders, invoices, activity-logs, emails
-- **Workflow operations**:
-  - vendor/rfq/quotation status updates
-  - quotation selection
-  - invoice payment
-  - email send logging
-  - analytics summary (`/api/analytics/summary`)
-- **Document fetch endpoints**:
-  - `/api/documents/invoices/:id`
-  - `/api/documents/purchase-orders/:id`
-
-### Frontend Modules
-
-UI pages include login/register, dashboard, vendors, RFQ creation, quotations, comparison, approvals, purchase orders, invoices, activity logs, and reports.
-
----
 
 ## Technical Stack
 
 ### Frontend
 - React 19
 - Vite 8
-- lucide-react
-- ESLint
+- lucide-react (icons)
+- ESLint 10
 
 ### Backend
-- Node.js (ESM)
+- Node.js (ES modules)
 - Express 4
-- JWT (`jsonwebtoken`)
-- Password hashing (`bcryptjs`)
-- CORS
-- dotenv
+- jsonwebtoken (JWT)
+- bcryptjs (password hashing)
+- dotenv, cors
 
-### Data Layer
-- PostgreSQL (`pg`) with schema initialization (`npm run db:init`)
-- JSON fallback persistence for local/demo mode
+### Persistence
+- PostgreSQL (`pg`) with schema/seed initializer (`backend/src/db/init.js`)
+- JSON-file fallback store (`backend/src/store.js`, `backend/src/data/db.json` generated at runtime)
 
----
+## Core Features and Workflows
 
-## Security & Cryptography
+### Implemented modules
+- **Auth**: `/api/auth/login`, `/api/auth/register`, `/api/auth/me`
+- **Resource collections**: `/api/users`, `/api/vendors`, `/api/rfqs`, `/api/quotations`, `/api/approvals`, `/api/purchase-orders`, `/api/invoices`, `/api/activity-logs`, `/api/emails`
+- **Workflow actions**:
+  - `PUT /api/vendors/:id/status`
+  - `PUT /api/rfqs/:id/status`
+  - `PUT /api/quotations/:id/status`
+  - `POST /api/quotations/:id/select`
+  - `PUT /api/invoices/:id/pay`
+  - `POST /api/emails/send`
+  - `GET /api/analytics/summary`
+- **Document fetch endpoints**:
+  - `GET /api/documents/invoices/:id`
+  - `GET /api/documents/purchase-orders/:id`
 
-The repository already includes several security-oriented controls:
+### Frontend workflow coverage
+- Login/register and session restore
+- Dashboard and role-aware navigation
+- Vendor management and status updates
+- RFQ creation and vendor assignment
+- Quotation submission/comparison flow
+- L1/L2 approval UI path
+- Purchase order and invoice screens
+- Activity log and report views
+- Email outbox log panel
 
-1. **JWT-based authentication**
-   - Signed access tokens with expiration (`12h`)
-   - Authorization header enforcement in protected routes
-2. **Role-based authorization**
-   - Route-level role checks for Admin / Officer / Manager / Vendor actions
-3. **Credential handling**
-   - Password hashing with `bcryptjs` in PostgreSQL-backed flows
-4. **Audit integrity guardrail (PostgreSQL mode)**
-   - `activity_logs` update/delete operations blocked by DB trigger to keep logs immutable
+## Security, Access Control, and Data Integrity
 
-### Important implementation note
+### Implemented now
+- **JWT access tokens** (`12h` expiry) for authenticated API access
+- **Role-based authorization** on write/workflow routes
+- **User sanitization** removing password fields from API responses
+- **Hashed passwords** in PostgreSQL mode (`bcryptjs`)
+- **Audit-log immutability trigger** in PostgreSQL mode (`activity_logs` update/delete blocked)
 
-`DATA_PROVIDER=json` is useful for demos/tests, but it is not a hardened production mode. For deployment-oriented usage, run with `DATA_PROVIDER=postgres` and a strong `JWT_SECRET`.
+### Important operational notes
+- JSON mode is useful for local demos/tests and fallback behavior.
+- PostgreSQL mode is the production-oriented path in this repository.
+- Set a strong `JWT_SECRET` for non-local environments.
 
----
+### Planned / not implemented as dedicated modules
+- Fine-grained policy engine beyond current role checks
+- Document encryption/key-management layer
+- External identity provider integrations
+
+## Current Implementation vs Roadmap
+
+### Verified current implementation
+- Full frontend + backend monorepo for procurement workflows
+- Dual persistence strategy (PostgreSQL + JSON fallback)
+- Seed data and bootstrapping utilities
+- Basic backend test coverage for health/auth/protected routes/workflow update
+
+### Practical roadmap opportunities
+- Expanded automated test coverage (frontend + integration)
+- Stronger validation/business-rule enforcement per route
+- Better reporting screens based on live analytics rather than static UI blocks
+- Production deployment artifacts (containerization/infra docs)
+- Enhanced observability and audit exports
+
+## Feasibility, Limitations, and Mitigations
+
+| Area | Current limitation | Mitigation path |
+|---|---|---|
+| Persistence mode | JSON fallback is not a hardened production store | Run with `DATA_PROVIDER=postgres` and initialize via `npm run db:init` |
+| Frontend behavior | Some screens include static/demo-style report values | Tie all report widgets to backend analytics endpoints and add tests |
+| Test depth | Backend tests exist; frontend end-to-end checks are script-based and optional | Add CI automation for targeted integration and UI checks |
+| Access control model | Role-based checks only | Add finer-grained permissions where needed |
+
+## Stakeholder Benefits
+
+- **Procurement teams**: centralized RFQ-to-invoice lifecycle visibility
+- **Approvers (Manager/Admin)**: clearer approval workflow and status traceability
+- **Vendors**: standardized quotation interaction model
+- **Operations/leadership**: summary analytics and activity tracking in one system
 
 ## Repository Structure
 
@@ -145,8 +202,8 @@ The repository already includes several security-oriented controls:
 VendorBridge/
 ├─ README.md
 ├─ backend/
-│  ├─ package.json
 │  ├─ .env.example
+│  ├─ package.json
 │  ├─ src/
 │  │  ├─ api/
 │  │  ├─ auth/
@@ -156,161 +213,137 @@ VendorBridge/
 │  │  ├─ middleware/
 │  │  ├─ app.js
 │  │  ├─ server.js
-│  │  └─ seed.js
+│  │  ├─ seed.js
+│  │  └─ store.js
 │  └─ test/
 │     └─ api.test.js
 └─ frontend/
    ├─ package.json
-   ├─ src/
-   │  ├─ components/
-   │  ├─ context/
-   │  ├─ pages/
-   │  ├─ App.jsx
-   │  └─ main.jsx
-   └─ public/
+   ├─ eslint.config.js
+   ├─ vite.config.js
+   ├─ scripts/
+   │  └─ audit-buttons.mjs
+   ├─ public/
+   └─ src/
+      ├─ components/
+      ├─ context/
+      ├─ pages/
+      ├─ App.jsx
+      └─ main.jsx
 ```
-
----
 
 ## Local Setup
 
 ### Prerequisites
-
 - Node.js 20+
 - npm
-- PostgreSQL (recommended for primary runtime)
+- PostgreSQL (optional but recommended for DB mode)
 
-### 1) Backend Setup
+### 1) Backend
 
 ```bash
-cd backend
+cd /home/runner/work/VendorBridge/VendorBridge/backend
 npm install
+cp .env.example .env
 ```
 
-Create `.env` from `.env.example` and update values:
-
-```env
-PORT=5000
-JWT_SECRET=replace-with-a-long-random-secret
-DATA_PROVIDER=postgres
-PGHOST=localhost
-PGPORT=5432
-PGUSER=postgres
-PGPASSWORD=your-postgres-password
-PGDATABASE=vendorbridge
-```
-
-Initialize schema + seed data:
+Run in JSON mode (default in `.env.example`) or set PostgreSQL mode in `.env` and initialize DB:
 
 ```bash
 npm run db:init
 ```
 
-Run backend:
+Start backend:
 
 ```bash
 npm start
 ```
 
-Health check: `GET http://localhost:5000/api/health`
+Health endpoint:
 
-### 2) Frontend Setup
+```text
+GET http://localhost:5000/api/health
+```
+
+### 2) Frontend
 
 ```bash
-cd frontend
+cd /home/runner/work/VendorBridge/VendorBridge/frontend
 npm install
 npm run dev
 ```
 
-Optional `frontend/.env`:
+Frontend default API target is `http://localhost:5000/api`. You can override it with:
 
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
----
+## Environment Configuration
 
-## Testing & Verification
+### Backend `.env` keys
+
+```env
+PORT=5000
+JWT_SECRET=vendorbridge-dev-secret
+DATA_PROVIDER=json
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=postgres
+PGDATABASE=vendorbridge
+```
+
+`DATA_PROVIDER=postgres` enables PostgreSQL repository paths. Any other value uses JSON fallback.
+
+## Scripts and Commands
+
+### Backend (`/backend`)
+- `npm run dev` – watch mode server
+- `npm start` – start server
+- `npm run db:init` – create/initialize PostgreSQL schema and seed data
+- `npm test` – run Node test suite
+
+### Frontend (`/frontend`)
+- `npm run dev` – start Vite dev server
+- `npm run build` – production build
+- `npm run lint` – ESLint checks
+- `npm run preview` – preview production build
+- `npm run audit:buttons` – Playwright-based UI button/navigation audit script
+
+## Testing and Verification
 
 ### Backend tests
 
 ```bash
-cd backend
+cd /home/runner/work/VendorBridge/VendorBridge/backend
 npm test
 ```
 
-### Frontend quality/build checks
+### Frontend quality checks
 
 ```bash
-cd frontend
+cd /home/runner/work/VendorBridge/VendorBridge/frontend
 npm run lint
 npm run build
 ```
 
----
+### Seed demo accounts
+Default seed users currently include:
+- `officer@vendorbridge.com`
+- `manager@vendorbridge.com`
+- `admin@vendorbridge.com`
+- `vendor1@infra.com`
+- `vendor2@techcore.com`
 
-## Seed Access (Demo)
+(Seed password in repository seed data: `password123`)
 
-Default seeded users (password: `password123`):
+## Contribution and Support
 
-- `officer@vendorbridge.com` (Officer)
-- `manager@vendorbridge.com` (Manager)
-- `vendor1@infra.com` (Vendor)
-- `vendor2@techcore.com` (Vendor)
-- `admin@vendorbridge.com` (Admin)
+- Open issues/PRs with clear reproduction steps and expected behavior.
+- Keep frontend and backend changes scoped and documented.
+- For environment/setup issues, include your `.env` mode (`json` vs `postgres`) when reporting.
 
----
+## License
 
-## Feasibility, Benchmarking, and Current Readiness
-
-### Feasibility
-
-- Monorepo setup keeps frontend/backend integration simple for SIH demo cycles.
-- Dual-provider data mode helps fast local demos while preserving a PostgreSQL-backed path.
-- Existing workflow APIs cover document lifecycle primitives: create, review, status transition, and audit visibility.
-
-### Benchmarking (current codebase level)
-
-- Baseline API health endpoint exists for service checks.
-- Backend test suite validates authentication and protected route behavior.
-- Analytics endpoint provides summary counters and spend aggregation for dashboard-level tracking.
-
-> No formal load-test or cryptographic performance benchmark scripts are present in this repository yet.
-
-### Impact potential
-
-With domain adaptation to legal/investigation records, this architecture can support:
-- controlled document access,
-- approval traceability,
-- tamper-aware logging patterns,
-- and operational transparency for administrative teams.
-
----
-
-## Product Roadmap (SDEMS Alignment)
-
-- [ ] Stronger cryptographic controls for stored documents (at-rest encryption strategy)
-- [ ] Evidence/document classification and case-linked metadata templates
-- [ ] Fine-grained policy model (beyond role-only) for legal/investigation use cases
-- [ ] Secure document upload/download pipeline with hash verification
-- [ ] Compliance dashboards and export-ready audit packs
-- [ ] Performance and resilience benchmarking suite
-
----
-
-## References
-
-- Smart India Hackathon: https://www.sih.gov.in/
-- Node.js: https://nodejs.org/
-- Express: https://expressjs.com/
-- PostgreSQL: https://www.postgresql.org/
-- JSON Web Tokens (RFC 7519): https://www.rfc-editor.org/rfc/rfc7519
-- Mermaid (for architecture diagrams): https://mermaid.js.org/
-
----
-
-## Repository Notes
-
-- `backend/.env` is local-only and must not be committed.
-- PostgreSQL init script creates DB objects and seeds data if users table is empty.
-- Activity log immutability trigger is applied in PostgreSQL initialization.
+No license file is currently present in this repository.
