@@ -64,13 +64,13 @@ The backend exposes REST endpoints for these resources and workflow transitions,
 
 ```mermaid
 flowchart TD
-  User[User (Officer/Manager/Admin/Vendor)] --> FE[Frontend: React + Vite]
-  FE -->|HTTP JSON API| BE[Backend: Express]
-  BE --> AUTH[JWT Auth + Role Middleware]
-  BE --> API[Resource + Workflow Routes]
-  API --> REPO[Repository Layer]
-  REPO -->|DATA_PROVIDER=postgres| PG[(PostgreSQL)]
-  REPO -->|DATA_PROVIDER=json| JSON[(Local db.json store)]
+  USER["Users: Officer, Manager, Admin, Vendor"] --> FE["Frontend: React + Vite"]
+  FE -->|HTTP JSON API| BE["Backend: Express"]
+  BE --> AUTH["JWT auth and role middleware"]
+  BE --> ROUTES["Resource and workflow routes"]
+  ROUTES --> REPO["Repository layer"]
+  REPO -->|DATA_PROVIDER=postgres| PG[("PostgreSQL")]
+  REPO -->|DATA_PROVIDER=json| JSON["Local JSON store (db.json)"]
 ```
 
 ### Typical request flow
@@ -81,7 +81,7 @@ sequenceDiagram
   participant FE as Frontend
   participant API as Express API
   participant R as Repository
-  participant D as Postgres/JSON
+  participant D as PostgreSQL or JSON
 
   U->>FE: Login
   FE->>API: POST /api/auth/login
@@ -91,7 +91,7 @@ sequenceDiagram
   R-->>API: User
   API-->>FE: JWT + sanitized user
 
-  FE->>API: GET /api/rfqs (******
+  FE->>API: GET /api/rfqs
   API->>API: requireAuth + role checks
   API->>R: listResource('rfqs')
   R->>D: Read RFQs + related items/vendors
