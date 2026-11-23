@@ -14,10 +14,20 @@
 
 VendorBridge is a full-stack ERP-style procurement application for managing vendor onboarding, RFQs, quotations, approvals, purchase orders, invoices, and activity logs. The codebase includes a React frontend, an Express API backend, and dual persistence modes (PostgreSQL or local JSON fallback).
 
+## 🎬 VendorBridge — Product Launch
+
+Experience VendorBridge — a connected procurement platform bringing
+vendor management, RFQs, quotations, approvals, purchase orders,
+and invoices into one streamlined workflow.
+
+GITHUB_VIDEO_ASSET_URL_PLACEHOLDER
+
+
 ---
 
 ## Table of Contents
 
+- [🎬 VendorBridge — Product Launch](#-vendorbridge--product-launch)
 - [Executive Overview](#executive-overview)
 - [Problem vs Solution](#problem-vs-solution)
 - [Architecture](#architecture)
