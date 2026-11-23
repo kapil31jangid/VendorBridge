@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
+import { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { LogIn, Key, Mail } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
 
 const Login = () => {
   const { login, setActiveTab } = useContext(AppContext);
@@ -22,60 +22,68 @@ const Login = () => {
 
   return (
     <div style={containerStyle}>
-      <div style={formCardStyle} className="card">
-        {/* Photo Circle Placeholder matching Screen 1 */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <div style={photoCircleStyle}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 700 }}>Photo</span>
-          </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.75rem' }}>VendorBridge</h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Centralized Procurement ERP Login</p>
+      <div style={formCardStyle}>
+        {/* Product Branding */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.75rem', textAlign: 'center' }}>
+          <div style={brandMarkStyle}>VB</div>
+          <h1 style={{ fontSize: '1.375rem', fontWeight: 600, marginTop: '0.875rem', color: 'var(--text-primary)' }}>
+            Sign in to VendorBridge
+          </h1>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+            Enterprise Procurement &amp; Vendor Management
+          </p>
         </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Username</label>
+            <label htmlFor="login-email">Work Email</label>
             <div style={inputContainerStyle}>
-              <Mail size={16} color="var(--text-muted)" style={inputIconStyle} />
-              <input 
-                type="email" 
-                className="form-control" 
-                placeholder="Username"
+              <Mail size={15} color="var(--text-muted)" style={inputIconStyle} />
+              <input
+                id="login-email"
+                type="email"
+                className="form-control"
+                placeholder="name@company.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                style={{ paddingLeft: '2.5rem' }}
+                style={{ paddingLeft: '2.25rem' }}
                 required
               />
             </div>
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Password</label>
+            <label htmlFor="login-password">Password</label>
             <div style={inputContainerStyle}>
-              <Key size={16} color="var(--text-muted)" style={inputIconStyle} />
-              <input 
-                type="password" 
-                className="form-control" 
-                placeholder="Password"
+              <Lock size={15} color="var(--text-muted)" style={inputIconStyle} />
+              <input
+                id="login-password"
+                type="password"
+                className="form-control"
+                placeholder="Enter your password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                style={{ paddingLeft: '2.5rem' }}
+                style={{ paddingLeft: '2.25rem' }}
                 required
               />
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', justifyContent: 'center' }}>
-            <LogIn size={18} />
-            <span>Login Button</span>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', height: '40px', marginTop: '0.25rem' }}
+          >
+            Sign In
           </button>
         </form>
 
         <div style={footerStyle}>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>New procurement member? </span>
-          <button 
-            onClick={() => setActiveTab('register')} 
+          <span style={{ color: 'var(--text-secondary)' }}>New procurement member? </span>
+          <button
+            type="button"
+            onClick={() => setActiveTab('register')}
             style={linkButtonStyle}
           >
             Create account
@@ -84,18 +92,18 @@ const Login = () => {
 
         {/* Quick Demo Logins Panel */}
         <div style={demoBoxStyle}>
-          <div style={demoHeaderStyle}>Demo Shortcuts (Hackathon Presentation)</div>
+          <div style={demoHeaderStyle}>Demo Access</div>
           <div style={demoGridStyle}>
-            <button onClick={() => quickLogin('officer@vendorbridge.com')} style={demoBtnStyle}>
+            <button type="button" onClick={() => quickLogin('officer@vendorbridge.com')} className="btn btn-secondary btn-sm">
               Officer
             </button>
-            <button onClick={() => quickLogin('manager@vendorbridge.com')} style={demoBtnStyle}>
+            <button type="button" onClick={() => quickLogin('manager@vendorbridge.com')} className="btn btn-secondary btn-sm">
               Manager
             </button>
-            <button onClick={() => quickLogin('vendor1@infra.com')} style={demoBtnStyle}>
+            <button type="button" onClick={() => quickLogin('vendor1@infra.com')} className="btn btn-secondary btn-sm">
               Vendor (Infra)
             </button>
-            <button onClick={() => quickLogin('admin@vendorbridge.com')} style={demoBtnStyle}>
+            <button type="button" onClick={() => quickLogin('admin@vendorbridge.com')} className="btn btn-secondary btn-sm">
               Admin
             </button>
           </div>
@@ -112,47 +120,32 @@ const containerStyle = {
   justifyContent: 'center',
   minHeight: '100vh',
   width: '100%',
-  backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%)'
+  backgroundColor: 'var(--bg-primary)',
+  padding: '1.5rem'
 };
 
 const formCardStyle = {
-  width: '420px',
-  padding: '2.5rem',
-  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)'
-};
-
-const photoCircleStyle = {
-  width: '80px',
-  height: '80px',
-  borderRadius: '50%',
-  border: '2px dashed var(--border-color)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: 'rgba(255, 255, 255, 0.02)'
-};
-
-const logoContainerStyle = {
-  textAlign: 'center',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: '0.35rem'
-};
-
-const logoIconStyle = {
-  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-  border: '1px solid var(--primary)',
+  width: '410px',
+  maxWidth: '100%',
+  backgroundColor: 'var(--bg-secondary)',
+  border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-lg)',
-  width: '48px',
-  height: '48px',
+  padding: '2rem',
+  boxShadow: 'var(--shadow-sm)'
+};
+
+const brandMarkStyle = {
+  width: '44px',
+  height: '44px',
+  borderRadius: 'var(--radius-md)',
+  backgroundColor: 'var(--text-primary)',
+  color: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '1.25rem',
-  fontWeight: 'bold',
-  color: 'var(--primary)',
-  marginBottom: '0.5rem'
+  fontSize: '0.9375rem',
+  fontWeight: 700,
+  letterSpacing: '0.02em'
 };
 
 const inputContainerStyle = {
@@ -163,34 +156,32 @@ const inputContainerStyle = {
 
 const inputIconStyle = {
   position: 'absolute',
-  left: '12px'
+  left: '0.75rem',
+  pointerEvents: 'none'
 };
 
 const footerStyle = {
   textAlign: 'center',
   marginTop: '1.25rem',
-  fontSize: '0.85rem'
+  fontSize: '0.8125rem'
 };
 
 const linkButtonStyle = {
-  backgroundColor: 'transparent',
-  border: 'none',
   color: 'var(--primary)',
-  fontWeight: '600',
-  cursor: 'pointer',
-  fontSize: '0.85rem'
+  fontWeight: 600,
+  fontSize: '0.8125rem'
 };
 
 const demoBoxStyle = {
-  marginTop: '2rem',
+  marginTop: '1.5rem',
   borderTop: '1px solid var(--border-color)',
   paddingTop: '1.25rem'
 };
 
 const demoHeaderStyle = {
-  fontSize: '0.75rem',
-  fontWeight: '700',
-  color: 'var(--color-warning)',
+  fontSize: '0.7rem',
+  fontWeight: 600,
+  color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
   textAlign: 'center',
@@ -201,23 +192,6 @@ const demoGridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, 1fr)',
   gap: '0.5rem'
-};
-
-const demoBtnStyle = {
-  padding: '0.45rem',
-  fontSize: '0.75rem',
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border-color)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--text-secondary)',
-  cursor: 'pointer',
-  textAlign: 'center',
-  fontWeight: '600',
-  transition: 'all 0.15s ease',
-  ':hover': {
-    borderColor: 'var(--primary)',
-    color: 'var(--text-primary)'
-  }
 };
 
 export default Login;

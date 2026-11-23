@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
+import { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { UserPlus, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const Register = () => {
   const { registerUser, setActiveTab } = useContext(AppContext);
@@ -9,7 +9,7 @@ const Register = () => {
     last_name: '',
     email: '',
     phone: '',
-    role: 'Officer', // Default role
+    role: 'Officer',
     country: 'India',
     additional_info: ''
   });
@@ -27,51 +27,56 @@ const Register = () => {
 
   return (
     <div style={containerStyle}>
-      <div style={formCardStyle} className="card">
-        {/* Header Link */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <button 
-            onClick={() => setActiveTab('login')} 
-            style={backBtnStyle}
+      <div style={formCardStyle}>
+        {/* Back Link */}
+        <div style={{ marginBottom: '1rem' }}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('login')}
+            className="btn btn-ghost btn-sm"
+            style={{ paddingLeft: 0, height: 'auto' }}
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={15} />
             <span>Back to Sign In</span>
           </button>
         </div>
 
-        {/* Photo Circle Placeholder matching Screen 2 */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <div style={photoCircleStyle}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 700 }}>Photo</span>
-          </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.75rem' }}>Registration Screen</h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Create your ERP account profile</p>
+        {/* Product Branding */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem', textAlign: 'center' }}>
+          <div style={brandMarkStyle}>VB</div>
+          <h1 style={{ fontSize: '1.375rem', fontWeight: 600, marginTop: '0.875rem', color: 'var(--text-primary)' }}>
+            Create an Account
+          </h1>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+            Register your VendorBridge procurement profile
+          </p>
         </div>
 
         {/* Register Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
           {/* Row 1: First Name & Last Name */}
-          <div style={nameRowStyle}>
-            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-              <label>First Name</label>
-              <input 
-                type="text" 
+          <div className="grid-2" style={{ gap: '0.75rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="reg-first">First Name</label>
+              <input
+                id="reg-first"
+                type="text"
                 name="first_name"
-                className="form-control" 
-                placeholder="First Name"
+                className="form-control"
+                placeholder="Amit"
                 value={formData.first_name}
                 onChange={handleChange}
                 required
               />
             </div>
-            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-              <label>Last Name</label>
-              <input 
-                type="text" 
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="reg-last">Last Name</label>
+              <input
+                id="reg-last"
+                type="text"
                 name="last_name"
-                className="form-control" 
-                placeholder="Last Name"
+                className="form-control"
+                placeholder="Sharma"
                 value={formData.last_name}
                 onChange={handleChange}
                 required
@@ -80,26 +85,28 @@ const Register = () => {
           </div>
 
           {/* Row 2: Email Address & Phone Number */}
-          <div style={nameRowStyle}>
-            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-              <label>Email Address</label>
-              <input 
-                type="email" 
+          <div className="grid-2" style={{ gap: '0.75rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="reg-email">Email Address</label>
+              <input
+                id="reg-email"
+                type="email"
                 name="email"
-                className="form-control" 
-                placeholder="Email Address"
+                className="form-control"
+                placeholder="name@company.com"
                 value={formData.email}
                 onChange={handleChange}
                 required
               />
             </div>
-            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-              <label>Phone Number</label>
-              <input 
-                type="text" 
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="reg-phone">Phone Number</label>
+              <input
+                id="reg-phone"
+                type="text"
                 name="phone"
-                className="form-control" 
-                placeholder="Phone Number"
+                className="form-control"
+                placeholder="+91 98765 43210"
                 value={formData.phone}
                 onChange={handleChange}
                 required
@@ -108,10 +115,11 @@ const Register = () => {
           </div>
 
           {/* Row 3: Role & Country */}
-          <div style={nameRowStyle}>
-            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-              <label>Role (Admin, officer)</label>
-              <select 
+          <div className="grid-2" style={{ gap: '0.75rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="reg-role">Role</label>
+              <select
+                id="reg-role"
                 name="role"
                 className="form-control"
                 value={formData.role}
@@ -123,13 +131,14 @@ const Register = () => {
                 <option value="Admin">ERP Admin</option>
               </select>
             </div>
-            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-              <label>Country</label>
-              <input 
-                type="text" 
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="reg-country">Country</label>
+              <input
+                id="reg-country"
+                type="text"
                 name="country"
                 className="form-control"
-                placeholder="Country"
+                placeholder="India"
                 value={formData.country}
                 onChange={handleChange}
                 required
@@ -139,21 +148,24 @@ const Register = () => {
 
           {/* Row 4: Additional Info */}
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Additional Information ....</label>
-            <textarea 
+            <label htmlFor="reg-info">Additional Information</label>
+            <textarea
+              id="reg-info"
               name="additional_info"
-              className="form-control" 
-              placeholder="Additional Information ...."
+              className="form-control"
+              placeholder="Department, company details, or onboarding notes"
               value={formData.additional_info}
               onChange={handleChange}
               rows={3}
-              style={{ resize: 'vertical' }}
             />
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', justifyContent: 'center' }}>
-            <UserPlus size={18} />
-            <span>Register</span>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', height: '40px', marginTop: '0.5rem' }}
+          >
+            Create Account
           </button>
         </form>
       </div>
@@ -168,43 +180,32 @@ const containerStyle = {
   justifyContent: 'center',
   minHeight: '100vh',
   width: '100%',
-  backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%)',
-  padding: '2rem 0'
+  backgroundColor: 'var(--bg-primary)',
+  padding: '2rem 1.5rem'
 };
 
 const formCardStyle = {
-  width: '460px',
-  padding: '2.5rem',
-  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)'
+  width: '480px',
+  maxWidth: '100%',
+  backgroundColor: 'var(--bg-secondary)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-lg)',
+  padding: '2rem',
+  boxShadow: 'var(--shadow-sm)'
 };
 
-const photoCircleStyle = {
-  width: '80px',
-  height: '80px',
-  borderRadius: '50%',
-  border: '2px dashed var(--border-color)',
+const brandMarkStyle = {
+  width: '44px',
+  height: '44px',
+  borderRadius: 'var(--radius-md)',
+  backgroundColor: 'var(--text-primary)',
+  color: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  backgroundColor: 'rgba(255, 255, 255, 0.02)'
-};
-
-const backBtnStyle = {
-  backgroundColor: 'transparent',
-  border: 'none',
-  color: 'var(--text-secondary)',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.4rem',
-  fontSize: '0.8rem',
-  fontWeight: '600',
-  padding: 0
-};
-
-const nameRowStyle = {
-  display: 'flex',
-  gap: '1rem'
+  fontSize: '0.9375rem',
+  fontWeight: 700,
+  letterSpacing: '0.02em'
 };
 
 export default Register;

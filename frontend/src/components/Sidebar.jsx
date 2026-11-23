@@ -1,8 +1,8 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import {
   LayoutDashboard, Users, FileText, Coins, ClipboardCheck,
-  Receipt, History, BarChart3, LogOut, ShieldCheck, FileCheck
+  Receipt, History, BarChart3, LogOut, FileCheck
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -24,151 +24,63 @@ const Sidebar = () => {
   const visibleItems = NAV_ITEMS.filter(item => item.roles.includes(currentUser.role));
 
   return (
-    <div style={sidebarStyle}>
-      {/* Logo */}
-      <div style={logoStyle}>
-        <div style={logoIconStyle}>VB</div>
+    <aside className="sidebar-container" aria-label="Primary Navigation">
+      {/* Brand */}
+      <div className="sidebar-brand">
+        <div className="sidebar-logo-mark">VB</div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>VendorBridge</div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>ERP SYSTEM</div>
+          <div style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+            VendorBridge
+          </div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+            Procurement ERP
+          </div>
         </div>
       </div>
 
-      {/* Role badge */}
-      <div style={roleBadgeContainerStyle}>
-        <ShieldCheck size={13} color="var(--accent-teal)" />
-        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-teal)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {currentUser.role}
-        </span>
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-          {currentUser.first_name}
-        </span>
-      </div>
-
-      {/* Nav Items */}
-      <nav style={{ flex: 1, marginTop: '0.5rem', overflowY: 'auto' }}>
+      {/* Navigation */}
+      <nav className="sidebar-nav">
         {visibleItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.key || (item.key === 'quotations' && activeTab === 'quotation-comparison');
           return (
             <button
               key={item.key}
+              type="button"
               onClick={() => setActiveTab(item.key)}
-              style={isActive ? activeNavStyle : navItemStyle}
+              className={`sidebar-nav-item${isActive ? ' active' : ''}`}
+              aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={17} />
+              <Icon size={16} strokeWidth={isActive ? 2.1 : 1.75} />
               <span>{item.label}</span>
-              {isActive && <div style={activeDotStyle} />}
             </button>
           );
         })}
       </nav>
 
-      {/* Logout */}
-      <button onClick={logout} style={logoutBtnStyle}>
-        <LogOut size={16} />
-        <span>Sign Out</span>
-      </button>
-    </div>
+      {/* Role indicator & Sign out */}
+      <div className="sidebar-footer">
+        <div className="sidebar-user-meta">
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {currentUser.first_name} {currentUser.last_name || ''}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              {currentUser.role}
+            </div>
+          </div>
+          <span className="badge badge-neutral" style={{ fontSize: '0.6875rem' }}>
+            {currentUser.role}
+          </span>
+        </div>
+
+        <button type="button" onClick={logout} className="sidebar-logout-btn">
+          <LogOut size={15} />
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </aside>
   );
-};
-
-const sidebarStyle = {
-  width: '220px',
-  flexShrink: 0,
-  backgroundColor: 'var(--bg-secondary)',
-  borderRight: '1px solid var(--border-color)',
-  display: 'flex',
-  flexDirection: 'column',
-  padding: '1.25rem 0.75rem',
-  gap: '0.25rem',
-  height: '100vh',
-};
-
-const logoStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.75rem',
-  padding: '0 0.5rem 1rem 0.5rem',
-  borderBottom: '1px solid var(--border-color)',
-  marginBottom: '0.75rem',
-};
-
-const logoIconStyle = {
-  width: '36px',
-  height: '36px',
-  borderRadius: '8px',
-  backgroundColor: 'rgba(99,102,241,0.15)',
-  border: '1px solid var(--primary)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontWeight: 800,
-  fontSize: '0.9rem',
-  color: 'var(--primary)',
-  flexShrink: 0,
-};
-
-const roleBadgeContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.35rem',
-  backgroundColor: 'rgba(20,184,166,0.06)',
-  border: '1px solid rgba(20,184,166,0.15)',
-  borderRadius: '6px',
-  padding: '0.4rem 0.65rem',
-  marginBottom: '0.75rem',
-};
-
-const navItemStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.65rem',
-  width: '100%',
-  padding: '0.6rem 0.75rem',
-  backgroundColor: 'transparent',
-  border: 'none',
-  borderRadius: '8px',
-  color: 'var(--text-secondary)',
-  fontSize: '0.82rem',
-  fontWeight: 500,
-  cursor: 'pointer',
-  textAlign: 'left',
-  transition: 'all 0.15s ease',
-  position: 'relative',
-};
-
-const activeNavStyle = {
-  ...navItemStyle,
-  backgroundColor: 'rgba(99,102,241,0.1)',
-  color: 'var(--primary)',
-  fontWeight: 700,
-};
-
-const activeDotStyle = {
-  position: 'absolute',
-  right: '10px',
-  width: '6px',
-  height: '6px',
-  borderRadius: '50%',
-  backgroundColor: 'var(--primary)',
-  boxShadow: '0 0 6px var(--primary)',
-};
-
-const logoutBtnStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.65rem',
-  width: '100%',
-  padding: '0.6rem 0.75rem',
-  backgroundColor: 'transparent',
-  border: '1px solid var(--border-color)',
-  borderRadius: '8px',
-  color: 'var(--color-error)',
-  fontSize: '0.82rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  marginTop: '0.5rem',
 };
 
 export default Sidebar;

@@ -1,207 +1,248 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { TrendingUp, DollarSign, FileCheck, Users } from 'lucide-react';
+import { Download, BarChart2 } from 'lucide-react';
+
+const formatCompact = (amount) => {
+  if (!amount || amount <= 0) return '$0';
+  if (amount >= 100000) return `$${(amount / 100000).toFixed(1)}L`;
+  if (amount >= 1000) return `$${(amount / 1000).toFixed(1)}k`;
+  return `$${amount.toLocaleString()}`;
+};
 
 const Reports = () => {
   const { purchaseOrders, invoices, vendors, quotations, rfqs } = useContext(AppContext);
 
-  const totalSpend = invoices.reduce((sum, inv) => sum + Number(inv.grand_total), 0);
-  const paidInvoices = invoices.filter(i => i.status === 'Paid').length;
-  const pendingInvoices = invoices.filter(i => i.status === 'Pending').length;
-  const activeVendors = vendors.filter(v => v.status === 'Active').length;
-  const totalRfqs = rfqs.length;
-  const totalQuotations = quotations.length;
+  const totalSpend = invoices.reduce((sum, inv) => sum + Number(inv.grand_total || 0), 0);
+  const activeVendorsCount = vendors.filter(v => v.status === 'Active').length;
+  const pendingInvoicesCount = invoices.filter(i => i.status === 'Pending').length;
+  const paidInvoicesCount = invoices.filter(i => i.status === 'Paid').length;
+  const fulfillmentRate = invoices.length > 0
+    ? Math.round((paidInvoicesCount / invoices.length) * 100)
+    : purchaseOrders.length > 0
+      ? 100
+      : 0;
 
-  const spendByMonth = [
-    { month: 'Jan', amount: 85000 },
-    { month: 'Feb', amount: 120000 },
-    { month: 'Mar', amount: 95000 },
-    { month: 'Apr', amount: 140000 },
-    { month: 'May', amount: 190000 },
-    { month: 'Jun', amount: totalSpend > 0 ? totalSpend : 230000 },
-  ];
-  const maxAmount = Math.max(...spendByMonth.map(d => d.amount));
+  // Compute spend by category from real invoices -> POs -> RFQs
+  const categoryTotals = {};
+  invoices.forEach(inv => {
+    const po = purchaseOrders.find(p => p.id === inv.po_id);
+    const rfq = po ? rfqs.find(r => r.id === po.rfq_id) : null;
+    const category = rfq?.category || 'General';
+    categoryTotals[category] = (categoryTotals[category] || 0) + Number(inv.grand_total || 0);
+  });
+
+  const categoryRows = Object.entries(categoryTotals)
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const maxCategorySpend = categoryRows.length > 0
+    ? Math.max(...categoryRows.map(c => c.amount))
+    : 0;
+
+  // Compute top vendors by spend from real purchase orders + quotations
+  const vendorStatsMap = {};
+  purchaseOrders.forEach(po => {
+    const quot = quotations.find(q => q.id === po.quotation_id);
+    if (!quot) return;
+    const v = vendors.find(item => item.id === quot.vendor_id);
+    const name = v ? v.name : `Vendor #${quot.vendor_id}`;
+    if (!vendorStatsMap[name]) {
+      vendorStatsMap[name] = { name, spend: 0, pos: 0 };
+    }
+    vendorStatsMap[name].spend += Number(quot.grand_total || 0);
+    vendorStatsMap[name].pos += 1;
+  });
+
+  const topVendors = Object.values(vendorStatsMap).sort((a, b) => b.spend - a.spend);
+
+  // Compute monthly trend from real invoice dates
+  const monthlyMap = {};
+  invoices.forEach(inv => {
+    const d = new Date(inv.date || inv.created_at);
+    if (Number.isNaN(d.getTime())) return;
+    const key = d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    monthlyMap[key] = (monthlyMap[key] || 0) + Number(inv.grand_total || 0);
+  });
+  const monthlySeries = Object.entries(monthlyMap).map(([month, amount]) => ({ month, amount }));
+  const maxMonthlySpend = monthlySeries.length > 0 ? Math.max(...monthlySeries.map(m => m.amount)) : 0;
+
+  const handleExport = () => {
+    const lines = [
+      'VendorBridge Procurement Report',
+      `Total Spend,$${totalSpend.toLocaleString()}`,
+      `Active Vendors,${activeVendorsCount}`,
+      `POs Issued,${purchaseOrders.length}`,
+      `Pending Invoices,${pendingInvoicesCount}`,
+      '',
+      'Top Vendors,Spend,POs',
+      ...topVendors.map(v => `"${v.name}",${v.spend},${v.pos}`)
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'vendorbridge-procurement-report.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Reports & analytics</h1>
-          <p style={{ fontSize: '1rem', marginTop: '0.4rem' }}>Procurement Insights- may 2025</p>
+          <h1 className="page-title">Reports &amp; Analytics</h1>
+          <p className="page-subtitle">Live procurement insights computed from recorded purchase orders and invoices</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button className="btn btn-outline" style={topButtonStyle}>May 2025</button>
-          <button className="btn btn-outline" style={topButtonStyle}>Export</button>
-        </div>
-      </div>
-
-      {/* KPI Row */}
-      <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem', maxWidth: '800px' }}>
-        <div style={{ ...kpiCardStyle, borderColor: '#4da6ff' }}>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#4da6ff' }}>12.4 L</div>
-          <div style={{ fontSize: '0.85rem', color: '#4da6ff', marginTop: '0.5rem' }}>total spend</div>
-        </div>
-        <div style={{ ...kpiCardStyle, borderColor: '#0a5c1a' }}>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0a5c1a' }}>28</div>
-          <div style={{ fontSize: '0.85rem', color: '#0a5c1a', marginTop: '0.5rem' }}>Active vendors</div>
-        </div>
-        <div style={{ ...kpiCardStyle, borderColor: '#d97706' }}>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#d97706' }}>94%</div>
-          <div style={{ fontSize: '0.85rem', color: '#d97706', marginTop: '0.5rem' }}>PO Fulfillment</div>
-        </div>
-        <div style={{ ...kpiCardStyle, borderColor: '#ff4d4d' }}>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ff4d4d' }}>3</div>
-          <div style={{ fontSize: '0.85rem', color: '#ff4d4d', marginTop: '0.5rem' }}>overdue invoices</div>
+        <div className="page-actions">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={handleExport}>
+            <Download size={14} />
+            <span>Export CSV</span>
+          </button>
         </div>
       </div>
 
-      {/* Bottom Layout */}
-      <div style={{ display: 'flex', gap: '2rem', marginTop: '1.5rem', backgroundColor: '#fff', color: '#000', padding: '2rem', borderRadius: 'var(--radius-md)' }}>
-        {/* Left Column: SPEND BY CATEGORY */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', textTransform: 'uppercase' }}>SPEND BY CATEGORY</h3>
-          
-          <div style={categoryRowStyle}>
-            <div style={categoryHeaderStyle}>
-              <span>IT Hardware</span>
-              <span>₹4.8L</span>
-            </div>
-            <div style={progressBgStyle}><div style={{...progressFillStyle, width: '45%', backgroundColor: '#0056b3'}}></div></div>
-          </div>
-          
-          <div style={categoryRowStyle}>
-            <div style={categoryHeaderStyle}>
-              <span>Furniture</span>
-              <span>₹3.2L</span>
-            </div>
-            <div style={progressBgStyle}><div style={{...progressFillStyle, width: '30%', backgroundColor: '#14b8a6'}}></div></div>
-          </div>
-
-          <div style={categoryRowStyle}>
-            <div style={categoryHeaderStyle}>
-              <span>Stationery</span>
-              <span>₹2.1L</span>
-            </div>
-            <div style={progressBgStyle}><div style={{...progressFillStyle, width: '20%', backgroundColor: '#f59e0b'}}></div></div>
-          </div>
-
-          <div style={categoryRowStyle}>
-            <div style={categoryHeaderStyle}>
-              <span>Logistics</span>
-              <span>₹2.3L</span>
-            </div>
-            <div style={progressBgStyle}><div style={{...progressFillStyle, width: '22%', backgroundColor: '#ef4444'}}></div></div>
-          </div>
+      {/* Four KPI Cards (Screen 11 order) */}
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <span className="kpi-label">Total Spend</span>
+          <span className="kpi-value" style={{ color: 'var(--primary)' }}>{formatCompact(totalSpend)}</span>
+          <span className="kpi-sub tabular-nums">${totalSpend.toLocaleString()} total invoiced</span>
         </div>
 
-        {/* Right Column */}
-        <div style={{ flex: 1.5, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Top Vendors */}
-          <div>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', textTransform: 'uppercase', marginBottom: '1rem' }}>TOP VENDORS BY SPEND</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}>
-                  <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontWeight: 600, color: '#333' }}>Vendor</th>
-                  <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontWeight: 600, color: '#333' }}>Spend (₹)</th>
-                  <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontWeight: 600, color: '#333' }}>POs</th>
-                </tr>
-              </thead>
-              <tbody style={{ border: '1px solid #e5e7eb' }}>
-                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '0.75rem 1rem' }}>TechCore Ltd</td>
-                  <td style={{ padding: '0.75rem 1rem' }}>4,20,000</td>
-                  <td style={{ padding: '0.75rem 1rem' }}>6</td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '0.75rem 1rem' }}>Infra Supplies</td>
-                  <td style={{ padding: '0.75rem 1rem' }}>3,10,000</td>
-                  <td style={{ padding: '0.75rem 1rem' }}>4</td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '0.75rem 1rem' }}>FastLog</td>
-                  <td style={{ padding: '0.75rem 1rem' }}>1,90,000</td>
-                  <td style={{ padding: '0.75rem 1rem' }}>3</td>
-                </tr>
-              </tbody>
-            </table>
+        <div className="kpi-card">
+          <span className="kpi-label">Active Vendors</span>
+          <span className="kpi-value" style={{ color: 'var(--color-success)' }}>{activeVendorsCount}</span>
+          <span className="kpi-sub tabular-nums">of {vendors.length} registered</span>
+        </div>
+
+        <div className="kpi-card">
+          <span className="kpi-label">Settlement Rate</span>
+          <span className="kpi-value">{fulfillmentRate}%</span>
+          <span className="kpi-sub tabular-nums">{paidInvoicesCount} of {invoices.length} invoices settled</span>
+        </div>
+
+        <div className="kpi-card">
+          <span className="kpi-label">Pending Invoices</span>
+          <span className="kpi-value" style={{ color: pendingInvoicesCount > 0 ? 'var(--color-error)' : 'var(--text-primary)' }}>
+            {pendingInvoicesCount}
+          </span>
+          <span className="kpi-sub">Open payment obligations</span>
+        </div>
+      </div>
+
+      {/* Bottom Two-Column Layout */}
+      <div className="reports-split">
+        {/* Left Column: Spend by Category */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <h2 className="section-eyebrow">Spend by Category</h2>
+
+          {categoryRows.length === 0 ? (
+            <div className="empty-state" style={{ padding: '2rem 1rem' }}>
+              <BarChart2 size={24} color="var(--text-muted)" />
+              <div className="empty-state-title">No category spend recorded</div>
+              <div className="empty-state-desc">Category totals will appear once invoices are generated.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {categoryRows.map((item, idx) => {
+                const pct = maxCategorySpend > 0 ? Math.round((item.amount / maxCategorySpend) * 100) : 0;
+                const barColors = ['var(--primary)', 'var(--accent-teal)', '#0369a1', '#64748b'];
+                return (
+                  <div key={item.category} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84375rem' }}>
+                      <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.category}</span>
+                      <span className="tabular-nums" style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        ${item.amount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', backgroundColor: barColors[idx % barColors.length], borderRadius: 'var(--radius-full)' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Top Vendors & Monthly Trend */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Top Vendors by Spend */}
+          <div className="card-flush">
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
+              <h2 className="section-eyebrow">Top Vendors by Spend</h2>
+            </div>
+            <div className="table-responsive">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Vendor</th>
+                    <th style={{ textAlign: 'right' }}>Spend ($)</th>
+                    <th style={{ textAlign: 'right' }}>POs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topVendors.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                        No vendor spend recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    topVendors.map(v => (
+                      <tr key={v.name}>
+                        <td style={{ fontWeight: 500 }}>{v.name}</td>
+                        <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600 }}>
+                          ${v.spend.toLocaleString()}
+                        </td>
+                        <td className="tabular-nums" style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                          {v.pos}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Monthly Trend */}
-          <div>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#666', textTransform: 'uppercase', marginBottom: '1rem' }}>MONTHLY TREND</h3>
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: '0.5rem' }}>
-              {[
-                { month: 'Dec', h: '30%' },
-                { month: 'Jan', h: '45%' },
-                { month: 'Feb', h: '35%' },
-                { month: 'Mar', h: '60%' },
-                { month: 'Apr', h: '55%' },
-                { month: 'May', h: '80%' },
-              ].map((d, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%', height: '100%', justifyContent: 'flex-end' }}>
-                  <div style={{ width: '80%', height: d.h, backgroundColor: d.month === 'May' ? '#0056b3' : '#b3d4f5', borderRadius: '4px 4px 0 0' }}></div>
-                  <span style={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>{d.month}</span>
-                </div>
-              ))}
-            </div>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 className="section-eyebrow">Monthly Trend</h2>
+            {monthlySeries.length === 0 ? (
+              <div style={{ fontSize: '0.84375rem', color: 'var(--text-muted)', padding: '1rem 0' }}>
+                No monthly invoice history available yet.
+              </div>
+            ) : (
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', height: '150px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: '1rem', backgroundColor: 'var(--bg-primary)' }}>
+                {monthlySeries.map((d, i) => {
+                  const pct = maxMonthlySpend > 0 ? Math.max(15, Math.round((d.amount / maxMonthlySpend) * 100)) : 15;
+                  const isLatest = i === monthlySeries.length - 1;
+                  return (
+                    <div key={d.month} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: 1, maxWidth: '72px', height: '100%', justifyContent: 'flex-end' }}>
+                      <span className="tabular-nums" style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                        {formatCompact(d.amount)}
+                      </span>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: `${pct}%`,
+                          backgroundColor: isLatest ? 'var(--primary)' : '#93c5fd',
+                          borderRadius: '4px 4px 0 0'
+                        }}
+                      />
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>{d.month}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-const topButtonStyle = {
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-md)',
-  backgroundColor: 'transparent',
-  color: 'var(--text-primary)',
-  padding: '0.4rem 1.5rem',
-  fontSize: '0.85rem',
-  fontWeight: '500',
-  cursor: 'pointer'
-};
-
-const kpiCardStyle = {
-  flex: 1,
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderRadius: 'var(--radius-md)',
-  padding: '1.5rem 1rem',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: 'transparent'
-};
-
-const categoryRowStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.4rem'
-};
-
-const categoryHeaderStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  fontSize: '0.9rem',
-  fontWeight: 500,
-  color: '#333'
-};
-
-const progressBgStyle = {
-  width: '100%',
-  height: '8px',
-  backgroundColor: '#f3f4f6',
-  borderRadius: '4px',
-  overflow: 'hidden'
-};
-
-const progressFillStyle = {
-  height: '100%',
-  borderRadius: '4px'
 };
 
 export default Reports;

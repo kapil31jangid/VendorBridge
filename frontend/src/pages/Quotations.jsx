@@ -1,15 +1,15 @@
-import React, { useState, useContext } from 'react';
+import { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Coins, Eye, CheckCircle2, ChevronRight, FileText, Calendar, DollarSign, Send } from 'lucide-react';
+import { Coins, Eye, CheckCircle2, ChevronRight, FileText } from 'lucide-react';
 
 const Quotations = () => {
-  const { 
-    rfqs, 
-    vendors, 
-    quotations, 
-    currentUser, 
-    submitQuotation, 
-    setActiveTab 
+  const {
+    rfqs,
+    vendors,
+    quotations,
+    currentUser,
+    submitQuotation,
+    setActiveTab
   } = useContext(AppContext);
 
   // Vendor Bidding State
@@ -22,25 +22,21 @@ const Quotations = () => {
   // Officer Selection state
   const [selectedRfqForView, setSelectedRfqForView] = useState(null);
 
-  // Identify Vendor Id linked to current logged-in user
   const loggedVendor = vendors.find(v => v.email.toLowerCase() === currentUser?.email?.toLowerCase());
 
   // --- VENDOR FLOW ---
-  // List RFQs assigned to this vendor
-  const vendorRFQs = rfqs.filter(rfq => 
-    rfq.status === 'Active' && 
-    loggedVendor && 
+  const vendorRFQs = rfqs.filter(rfq =>
+    rfq.status === 'Active' &&
+    loggedVendor &&
     rfq.assigned_vendors.includes(loggedVendor.id)
   );
 
-  // Check if vendor already submitted quotation for an RFQ
   const hasSubmitted = (rfqId) => {
     return quotations.some(q => q.rfq_id === rfqId && q.vendor_id === loggedVendor?.id);
   };
 
   const startBid = (rfq) => {
     setSelectedRfqForBid(rfq);
-    // Initialize bid items with rfq item properties
     setBidItems(rfq.items.map(item => ({
       item_name: item.item_name,
       quantity: item.quantity,
@@ -78,7 +74,7 @@ const Quotations = () => {
       subtotal: sub,
       gst_amount: gstAmt,
       grand_total: grand,
-      delivery_days: parseInt(deliveryDays),
+      delivery_days: parseInt(deliveryDays, 10),
       payment_terms: paymentTerms,
       items: bidItems
     });
@@ -87,8 +83,7 @@ const Quotations = () => {
   };
 
   // --- OFFICER FLOW ---
-  // List RFQs that have received at least 1 quotation
-  const activeComparisonRFQs = rfqs.filter(rfq => 
+  const activeComparisonRFQs = rfqs.filter(rfq =>
     quotations.some(q => q.rfq_id === rfq.id)
   );
 
@@ -101,63 +96,71 @@ const Quotations = () => {
     return v ? v.name : 'Unknown Vendor';
   };
 
+  const subtotal = calculateSubtotal();
+  const gstAmount = calculateGstAmount(subtotal);
+  const grandTotal = subtotal + gstAmount;
+
   return (
-    <div style={wrapperStyle}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* VENDOR INTERFACE */}
       {currentUser.role === 'Vendor' && (
         <>
           {!selectedRfqForBid ? (
-            <div>
-              <div style={headerStyle}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="page-header">
                 <div>
-                  <h1 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Vendor Bidding Board</h1>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Review assigned RFQs and submit bid pricing.</p>
+                  <h1 className="page-title">Vendor Bidding Board</h1>
+                  <p className="page-subtitle">Review assigned RFQs and submit competitive quotations</p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                 {vendorRFQs.length === 0 ? (
-                  <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    <FileText size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                    <p>No active RFQs have been assigned to your vendor profile.</p>
+                  <div className="card empty-state">
+                    <FileText size={28} color="var(--text-muted)" />
+                    <div className="empty-state-title">No assigned RFQs</div>
+                    <div className="empty-state-desc">No active RFQs have been assigned to your vendor profile yet.</div>
                   </div>
                 ) : (
                   vendorRFQs.map(rfq => {
                     const alreadyBid = hasSubmitted(rfq.id);
                     return (
-                      <div key={rfq.id} className="card" style={rfqCardStyle}>
-                        <div style={rfqHeaderRowStyle}>
+                      <div key={rfq.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                           <div>
-                            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>{rfq.title}</h3>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                              RFQ ID: #{rfq.id} | Category: {rfq.category}
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>{rfq.title}</h3>
+                            <p style={{ fontSize: '0.78125rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                              RFQ #{rfq.id} · {rfq.category}
                             </p>
                           </div>
                           <div>
                             {alreadyBid ? (
-                              <div style={submittedBadgeStyle}>
-                                <CheckCircle2 size={14} />
+                              <span className="badge badge-success">
+                                <CheckCircle2 size={12} />
                                 <span>Bid Submitted</span>
-                              </div>
+                              </span>
                             ) : (
-                              <button className="btn btn-teal btn-sm" onClick={() => startBid(rfq)}>
-                                <Coins size={14} />
-                                <span>Submit Quotation</span>
+                              <button type="button" className="btn btn-primary btn-sm" onClick={() => startBid(rfq)}>
+                                Submit Quotation
                               </button>
                             )}
                           </div>
                         </div>
 
-                        <p style={rfqDescStyle}>{rfq.description}</p>
-                        
-                        <div style={rfqMetaGridStyle}>
+                        <p style={{ fontSize: '0.84375rem', color: 'var(--text-secondary)' }}>{rfq.description}</p>
+
+                        <div style={{ display: 'flex', gap: '2rem', fontSize: '0.8125rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
                           <div>
-                            <span style={metaLabelStyle}>Deadline:</span>
-                            <span style={metaValueStyle}>{new Date(rfq.deadline).toLocaleDateString()}</span>
+                            <span style={{ color: 'var(--text-muted)', marginRight: '0.4rem' }}>Deadline:</span>
+                            <span className="tabular-nums" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {new Date(rfq.deadline).toLocaleDateString()}
+                            </span>
                           </div>
                           <div>
-                            <span style={metaLabelStyle}>Line Items:</span>
-                            <span style={metaValueStyle}>{rfq.items.length} Product types</span>
+                            <span style={{ color: 'var(--text-muted)', marginRight: '0.4rem' }}>Line Items:</span>
+                            <span className="tabular-nums" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {rfq.items.length} item{rfq.items.length === 1 ? '' : 's'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -167,254 +170,233 @@ const Quotations = () => {
               </div>
             </div>
           ) : (
-            /* Bid Submission Form matched to wireframe */
-            <div>
-              <div style={formHeaderStyle}>
+            /* Bid Submission Form matching Screen 6 wireframe */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="page-header">
                 <div>
-                  <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Submit Quotations</h1>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginTop: '0.25rem' }}>
-                    RFQ: office furniture procurement q2 - deadline 15 june 2025
+                  <h1 className="page-title">Submit Quotation</h1>
+                  <p className="page-subtitle">
+                    RFQ: {selectedRfqForBid.title} — Deadline {new Date(selectedRfqForBid.deadline).toLocaleDateString()}
                   </p>
                 </div>
               </div>
 
-              <form onSubmit={handleBidSubmit}>
-                <div style={rfqSummaryBoxStyle}>
-                  <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' }}>RFQ Summary</p>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Ergonomic chair * 25, standing desk *10 - category furniture</p>
+              <form onSubmit={handleBidSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* RFQ Summary */}
+                <div className="card" style={{ backgroundColor: 'var(--bg-primary)', padding: '1rem 1.25rem' }}>
+                  <div className="section-eyebrow" style={{ marginBottom: '0.3rem' }}>RFQ Summary</div>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                    {selectedRfqForBid.items.map(i => `${i.item_name} × ${i.quantity}`).join(', ')} — Category: {selectedRfqForBid.category}
+                  </p>
                 </div>
 
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 500, margin: '1.5rem 0 0.5rem 0' }}>Your Quotation</h3>
-                
-                <div className="table-responsive" style={tableWrapperStyle}>
-                  <table className="custom-table" style={tableStyle}>
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        <th>Unit price</th>
-                        <th>Total</th>
-                        <th>Delivery ( days)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bidItems.map((item, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <input 
-                              type="text" 
-                              className="form-control" 
-                              value={item.item_name}
-                              readOnly
-                              style={tableInputStyle}
-                            />
-                          </td>
-                          <td>
-                            <input 
-                              type="number" 
-                              className="form-control" 
-                              value={item.quantity}
-                              readOnly
-                              style={tableInputStyle}
-                            />
-                          </td>
-                          <td>
-                            <input 
-                              type="number" 
-                              className="form-control" 
-                              value={item.unit_price || ''}
-                              onChange={e => handlePriceChange(idx, e.target.value)}
-                              style={tableInputStyle}
-                              min="0"
-                            />
-                          </td>
-                          <td>
-                            <input 
-                              type="text" 
-                              className="form-control" 
-                              value={item.total.toLocaleString()}
-                              readOnly
-                              style={tableInputStyle}
-                            />
-                          </td>
-                          <td>
-                            <input 
-                              type="number" 
-                              className="form-control" 
-                              value={deliveryDays}
-                              onChange={e => setDeliveryDays(e.target.value)}
-                              style={tableInputStyle}
-                              min="1"
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <hr style={dividerStyle} />
-
-                <div style={twoColGridStyle}>
-                  <div style={leftColStyle}>
-                    <div className="form-group">
-                      <label style={labelStyle}>tax / GST %</label>
-                      <input 
-                        type="text" 
-                        className="form-control"
-                        value={`${gstPercent} %`}
-                        onChange={e => setGstPercent(parseInt(e.target.value) || 0)}
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label style={labelStyle}>Note / terms</label>
-                      <textarea 
-                        className="form-control"
-                        value={paymentTerms}
-                        onChange={e => setPaymentTerms(e.target.value)}
-                        placeholder="Payment terms: 20 days net..."
-                        rows={4}
-                        style={{...inputStyle, resize: 'none'}}
-                      />
-                    </div>
-
-                    <div style={leftButtonsContainerStyle}>
-                      <button type="submit" className="btn btn-outline" style={bottomButtonStyle}>
-                        Submit Quotation
-                      </button>
-                      <button type="button" className="btn btn-outline" onClick={() => setSelectedRfqForBid(null)} style={bottomButtonStyle}>
-                        Save Draft
-                      </button>
+                {/* Your Quotation Table */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <h2 className="section-heading">Your Quotation</h2>
+                  <div className="card-flush">
+                    <div className="table-responsive">
+                      <table className="custom-table">
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            <th style={{ width: '90px' }}>Qty</th>
+                            <th style={{ width: '150px' }}>Unit Price ($)</th>
+                            <th style={{ width: '140px', textAlign: 'right' }}>Total ($)</th>
+                            <th style={{ width: '140px' }}>Delivery (Days)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bidItems.map((item, idx) => (
+                            <tr key={idx}>
+                              <td style={{ fontWeight: 500 }}>{item.item_name}</td>
+                              <td className="tabular-nums">{item.quantity}</td>
+                              <td style={{ padding: '0.5rem 0.75rem' }}>
+                                <input
+                                  type="number"
+                                  className="form-control tabular-nums"
+                                  value={item.unit_price || ''}
+                                  onChange={e => handlePriceChange(idx, e.target.value)}
+                                  placeholder="0.00"
+                                  min="0"
+                                  style={{ minHeight: '32px', padding: '0.3rem 0.6rem' }}
+                                />
+                              </td>
+                              <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600 }}>
+                                ${item.total.toLocaleString()}
+                              </td>
+                              <td style={{ padding: '0.5rem 0.75rem' }}>
+                                <input
+                                  type="number"
+                                  className="form-control tabular-nums"
+                                  value={deliveryDays}
+                                  onChange={e => setDeliveryDays(e.target.value)}
+                                  min="1"
+                                  style={{ minHeight: '32px', padding: '0.3rem 0.6rem' }}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
+                </div>
 
-                  <div style={rightColStyle}>
-                    <div style={calcContainerStyle}>
-                      <div style={calcRowStyle}>
+                {/* Bottom Two-Column Tax/Notes & Summary */}
+                <div className="card" style={{ padding: '1.5rem' }}>
+                  <div className="grid-2" style={{ gap: '2rem', alignItems: 'start' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div className="form-group">
+                        <label htmlFor="quote-gst">Tax / GST %</label>
+                        <input
+                          id="quote-gst"
+                          type="number"
+                          className="form-control tabular-nums"
+                          value={gstPercent}
+                          onChange={e => setGstPercent(parseFloat(e.target.value) || 0)}
+                          min="0"
+                          max="100"
+                          style={{ maxWidth: '160px' }}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="quote-terms">Notes / Payment Terms</label>
+                        <textarea
+                          id="quote-terms"
+                          className="form-control"
+                          value={paymentTerms}
+                          onChange={e => setPaymentTerms(e.target.value)}
+                          placeholder="e.g. Payment terms: 30 days net"
+                          rows={3}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <button type="submit" className="btn btn-primary">
+                          Submit Quotation
+                        </button>
+                        <button type="button" className="btn btn-secondary" onClick={() => setSelectedRfqForBid(null)}>
+                          Save Draft
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', maxWidth: '340px', width: '100%', marginLeft: 'auto' }}>
+                      <div className="section-eyebrow" style={{ marginBottom: '0.875rem' }}>Pricing Summary</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
                         <span>Subtotal</span>
-                        <span>{calculateSubtotal().toLocaleString()}</span>
+                        <span className="tabular-nums" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>${subtotal.toLocaleString()}</span>
                       </div>
-                      <div style={calcRowStyle}>
-                        <span>GST (18%)</span>
-                        <span>{calculateGstAmount(calculateSubtotal()).toLocaleString()}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                        <span>GST ({gstPercent}%)</span>
+                        <span className="tabular-nums" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>${gstAmount.toLocaleString()}</span>
                       </div>
-                      <hr style={{ borderColor: 'var(--text-secondary)', margin: '1rem 0' }} />
-                      <div style={calcRowStyle}>
-                        <span>Grand total</span>
-                        <span>{(calculateSubtotal() + calculateGstAmount(calculateSubtotal())).toLocaleString()}</span>
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <span>Grand Total</span>
+                        <span className="tabular-nums">${grandTotal.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-
               </form>
             </div>
           )}
         </>
       )}
 
-      {/* OFFICER/ADMIN INTERFACE */}
+      {/* OFFICER / MANAGER / ADMIN INTERFACE */}
       {currentUser.role !== 'Vendor' && (
-        <div>
-          <div style={headerStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="page-header">
             <div>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Received Quotations Log</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Review submissions from vendors and trigger side-by-side comparison.</p>
+              <h1 className="page-title">Received Quotations</h1>
+              <p className="page-subtitle">Review vendor bid submissions and launch side-by-side price comparisons</p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {activeComparisonRFQs.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                <Coins size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                <p>No vendor quotations have been received by the ERP yet.</p>
+              <div className="card empty-state">
+                <Coins size={28} color="var(--text-muted)" />
+                <div className="empty-state-title">No quotations received</div>
+                <div className="empty-state-desc">Vendor bid submissions for active RFQs will appear here.</div>
               </div>
             ) : (
               activeComparisonRFQs.map(rfq => {
                 const receivedQuotes = getQuotationsForRFQ(rfq.id);
+                const isExpanded = selectedRfqForView === rfq.id;
                 return (
-                  <div key={rfq.id} className="card" style={rfqCardStyle}>
-                    <div style={rfqHeaderRowStyle}>
+                  <div key={rfq.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                       <div>
-                        <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>{rfq.title}</h3>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                          RFQ ID: #{rfq.id} | Category: {rfq.category}
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>{rfq.title}</h3>
+                        <p style={{ fontSize: '0.78125rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          RFQ #{rfq.id} · {rfq.category} · Deadline {new Date(rfq.deadline).toLocaleDateString()}
                         </p>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <button 
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span className={`badge ${rfq.status === 'Approved' ? 'badge-success' : 'badge-info'}`}>
+                          {rfq.status}
+                        </span>
+                        <button
+                          type="button"
                           className="btn btn-secondary btn-sm"
-                          onClick={() => setSelectedRfqForView(selectedRfqForView === rfq.id ? null : rfq.id)}
+                          onClick={() => setSelectedRfqForView(isExpanded ? null : rfq.id)}
                         >
                           <Eye size={13} />
-                          <span>View Bids ({receivedQuotes.length})</span>
+                          <span>{isExpanded ? 'Hide Bids' : `View Bids (${receivedQuotes.length})`}</span>
                         </button>
-                        <button 
+                        <button
+                          type="button"
                           className="btn btn-primary btn-sm"
                           onClick={() => {
                             window.selectedRfqForComparison = rfq.id;
                             setActiveTab('quotation-comparison');
                           }}
                         >
-                          <span>Compare side-by-side</span>
-                          <ChevronRight size={13} />
+                          <span>Compare Side-by-Side</span>
+                          <ChevronRight size={14} />
                         </button>
                       </div>
                     </div>
 
-                    <div style={{ ...rfqMetaGridStyle, marginTop: '1rem' }}>
-                      <div>
-                        <span style={metaLabelStyle}>Deadline:</span>
-                        <span style={metaValueStyle}>{new Date(rfq.deadline).toLocaleDateString()}</span>
-                      </div>
-                      <div>
-                        <span style={metaLabelStyle}>Status:</span>
-                        <span className={`badge ${rfq.status === 'Approved' ? 'badge-success' : 'badge-info'}`}>
-                          {rfq.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Quotation Details sub-panel dropdown */}
-                    {selectedRfqForView === rfq.id && (
-                      <div style={quotesDropdownStyle}>
-                        <h4 style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                          Bids Received Summary:
-                        </h4>
-                        <div className="table-responsive">
-                          <table className="custom-table" style={{ fontSize: '0.8rem' }}>
-                            <thead>
-                              <tr>
-                                <th>Vendor</th>
-                                <th>Subtotal</th>
-                                <th>GST (18%)</th>
-                                <th>Grand Total</th>
-                                <th>Delivery</th>
-                                <th>Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {receivedQuotes.map(q => (
-                                <tr key={q.id}>
-                                  <td style={{ fontWeight: 600 }}>{getVendorName(q.vendor_id)}</td>
-                                  <td>${q.subtotal.toLocaleString()}</td>
-                                  <td>${q.gst_amount.toLocaleString()}</td>
-                                  <td style={{ fontWeight: 700, color: 'var(--primary)' }}>${q.grand_total.toLocaleString()}</td>
-                                  <td>{q.delivery_days} days</td>
-                                  <td>
-                                    <span className={`badge ${
-                                      q.status === 'Selected' ? 'badge-success' :
-                                      q.status === 'Rejected' ? 'badge-error' : 'badge-warning'
-                                    }`}>
-                                      {q.status}
-                                    </span>
-                                  </td>
+                    {isExpanded && (
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                        <div className="card-flush">
+                          <div className="table-responsive">
+                            <table className="custom-table">
+                              <thead>
+                                <tr>
+                                  <th>Vendor</th>
+                                  <th style={{ textAlign: 'right' }}>Subtotal</th>
+                                  <th style={{ textAlign: 'right' }}>GST</th>
+                                  <th style={{ textAlign: 'right' }}>Grand Total</th>
+                                  <th>Delivery</th>
+                                  <th>Status</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {receivedQuotes.map(q => (
+                                  <tr key={q.id}>
+                                    <td style={{ fontWeight: 500 }}>{getVendorName(q.vendor_id)}</td>
+                                    <td className="tabular-nums" style={{ textAlign: 'right' }}>${q.subtotal.toLocaleString()}</td>
+                                    <td className="tabular-nums" style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>${q.gst_amount.toLocaleString()}</td>
+                                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600 }}>${q.grand_total.toLocaleString()}</td>
+                                    <td className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>{q.delivery_days} days</td>
+                                    <td>
+                                      <span className={`badge ${
+                                        q.status === 'Selected' ? 'badge-success' :
+                                        q.status === 'Rejected' ? 'badge-error' : 'badge-warning'
+                                      }`}>
+                                        {q.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -427,215 +409,6 @@ const Quotations = () => {
       )}
     </div>
   );
-};
-
-/* Styles */
-const wrapperStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.5rem'
-};
-
-const headerStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  paddingBottom: '0.5rem',
-  borderBottom: '1px solid var(--border-color)'
-};
-
-const rfqCardStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.75rem'
-};
-
-const rfqHeaderRowStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  flexWrap: 'wrap',
-  gap: '1rem'
-};
-
-const rfqDescStyle = {
-  fontSize: '0.85rem',
-  color: 'var(--text-secondary)',
-  lineHeight: 1.4
-};
-
-const rfqMetaGridStyle = {
-  display: 'flex',
-  gap: '2rem',
-  fontSize: '0.8rem',
-  borderTop: '1px solid rgba(255, 255, 255, 0.03)',
-  paddingTop: '0.75rem',
-  marginTop: '0.25rem'
-};
-
-const metaLabelStyle = {
-  color: 'var(--text-muted)',
-  marginRight: '0.4rem'
-};
-
-const metaValueStyle = {
-  fontWeight: '600',
-  color: 'var(--text-secondary)'
-};
-
-const submittedBadgeStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.35rem',
-  color: 'var(--color-success)',
-  backgroundColor: 'var(--color-success-bg)',
-  fontSize: '0.75rem',
-  fontWeight: '600',
-  padding: '0.4rem 0.75rem',
-  borderRadius: 'var(--radius-full)',
-  border: '1px solid rgba(16, 185, 129, 0.3)'
-};
-
-const formHeaderStyle = {
-  borderBottom: '1px solid var(--border-color)',
-  paddingBottom: '1rem',
-  marginBottom: '1.5rem'
-};
-
-const sectionTitleStyle = {
-  fontSize: '0.9rem',
-  fontWeight: '700',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  color: 'var(--text-secondary)',
-  marginBottom: '0.75rem'
-};
-
-const formFlexRowStyle = {
-  display: 'flex',
-  gap: '1rem',
-  flexWrap: 'wrap'
-};
-
-const calcContainerStyle = {
-  alignSelf: 'flex-end',
-  width: '320px',
-  marginLeft: 'auto',
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border-color)',
-  padding: '1rem',
-  borderRadius: 'var(--radius-md)',
-  marginTop: '1.5rem'
-};
-
-const calcRowStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  fontSize: '0.85rem',
-  color: 'var(--text-secondary)',
-  marginBottom: '0.4rem'
-};
-
-const formFooterStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  marginTop: '1.5rem',
-  borderTop: '1px solid var(--border-color)',
-  paddingTop: '1rem'
-};
-
-const quotesDropdownStyle = {
-  marginTop: '1rem',
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border-color)',
-  padding: '1rem',
-  borderRadius: 'var(--radius-md)'
-};
-
-const rfqSummaryBoxStyle = {
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-md)',
-  padding: '1rem',
-  marginBottom: '1rem'
-};
-
-const tableWrapperStyle = {
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-md)',
-  overflow: 'hidden',
-  marginBottom: '1rem'
-};
-
-const tableStyle = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  textAlign: 'left'
-};
-
-const tableInputStyle = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-primary)',
-  width: '100%',
-  outline: 'none',
-  padding: '0'
-};
-
-const dividerStyle = {
-  borderColor: 'var(--text-secondary)',
-  opacity: 0.3,
-  margin: '1.5rem 0'
-};
-
-const twoColGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '2rem'
-};
-
-const leftColStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem'
-};
-
-const rightColStyle = {
-  display: 'flex',
-  flexDirection: 'column'
-};
-
-const labelStyle = {
-  fontSize: '0.85rem',
-  fontWeight: '500',
-  marginBottom: '0.5rem',
-  display: 'block'
-};
-
-const inputStyle = {
-  backgroundColor: 'transparent',
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-md)',
-  padding: '0.6rem 1rem',
-  color: 'var(--text-primary)',
-  width: '100%',
-  fontFamily: 'inherit'
-};
-
-const leftButtonsContainerStyle = {
-  display: 'flex',
-  gap: '1rem',
-  marginTop: '0.5rem'
-};
-
-const bottomButtonStyle = {
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-full)',
-  backgroundColor: 'transparent',
-  color: 'var(--text-primary)',
-  padding: '0.4rem 1.5rem',
-  fontSize: '0.85rem',
-  fontWeight: '500',
-  cursor: 'pointer'
 };
 
 export default Quotations;

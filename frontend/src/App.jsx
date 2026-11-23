@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { AppContext } from './context/AppContext';
 
 import Navbar from './components/Navbar';
@@ -31,34 +31,33 @@ const App = () => {
 
   const renderPage = () => {
     switch (activeTab) {
-      case 'dashboard':        return <Dashboard />;
-      case 'vendors':          return <Vendors />;
-      case 'rfqs':             return <CreateRFQ />;
-      case 'quotations':       return <Quotations />;
+      case 'dashboard':            return <Dashboard />;
+      case 'vendors':              return <Vendors />;
+      case 'rfqs':                 return <CreateRFQ />;
+      case 'quotations':           return <Quotations />;
       case 'quotation-comparison': return <QuotationComparison onBackToQuotations={() => setActiveTab('quotations')} />;
-      case 'approvals':        return <ApprovalPage />;
-      case 'purchase-orders':  return <PurchaseOrders />;
-      case 'invoices':         return <Invoices />;
-      case 'activity':         return <ActivityLogs />;
-      case 'reports':          return <Reports />;
-      default:                 return <Dashboard />;
+      case 'approvals':            return <ApprovalPage />;
+      case 'purchase-orders':      return <PurchaseOrders />;
+      case 'invoices':             return <Invoices />;
+      case 'activity':             return <ActivityLogs />;
+      case 'reports':              return <Reports />;
+      default:                     return <Dashboard />;
     }
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-primary)', overflow: 'hidden' }}>
-      {/* Sidebar */}
+    <div className="app-shell">
       <Sidebar />
 
-      {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="app-main">
         <Navbar onOpenInbox={() => setInboxOpen(true)} />
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-          {renderPage()}
-        </div>
+        <main className="app-content">
+          <div className="page-stack">
+            {renderPage()}
+          </div>
+        </main>
       </div>
 
-      {/* Global overlays */}
       {toast && <Toast toast={toast} />}
       <EmailInbox isOpen={inboxOpen} onClose={() => setInboxOpen(false)} />
     </div>

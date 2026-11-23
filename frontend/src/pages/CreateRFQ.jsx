@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { X } from 'lucide-react';
+import { X, Plus, Upload } from 'lucide-react';
 
 const fallbackRfqVendors = [
   { id: 101, name: 'Infra Supplies Ltd', status: 'Active' },
@@ -30,12 +30,10 @@ const CreateRFQ = () => {
   const assignedVendors = vendorOptions.filter(vendor => assignedVendorIds.some(id => String(id) === String(vendor.id)));
   const availableVendors = vendorOptions.filter(vendor => !assignedVendorIds.some(id => String(id) === String(vendor.id)));
 
-  // Change basic detail handler
   const handleDetailChange = (e) => {
     setRfqDetails({ ...rfqDetails, [e.target.name]: e.target.value });
   };
 
-  // Line item handlers
   const handleItemChange = (index, field, value) => {
     const updated = [...lineItems];
     updated[index][field] = value;
@@ -46,7 +44,6 @@ const CreateRFQ = () => {
     setLineItems([...lineItems, { id: Date.now(), item_name: '', quantity: 1, unit: 'NOS' }]);
   };
 
-  // Vendor assignment
   const toggleVendorSelection = (vendorId) => {
     if (assignedVendorIds.some(id => String(id) === String(vendorId))) {
       setAssignedVendorIds(assignedVendorIds.filter(id => String(id) !== String(vendorId)));
@@ -84,376 +81,280 @@ const CreateRFQ = () => {
     setActiveTab('rfqs');
   };
 
+  const steps = [
+    { num: 1, label: 'RFQ Details', active: true },
+    { num: 2, label: 'Line Items & Vendors', active: lineItems.length > 0 && assignedVendors.length > 0 },
+    { num: 3, label: 'Publish', active: false }
+  ];
+
   return (
-    <div style={wrapperStyle}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Page Header */}
-      <div style={headerStyle}>
+      <div className="page-header">
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Create RFQ's</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginTop: '0.25rem' }}>new request for quotation</p>
+          <h1 className="page-title">Create RFQ</h1>
+          <p className="page-subtitle">Define requirements, line items, and invited vendors for a new request for quotation</p>
         </div>
       </div>
 
       {/* Progress Steps Indicator */}
-      <div style={stepsIndicatorContainerStyle}>
-        <div style={stepContainerStyle}>
-          <div style={stepCircleStyle(true)}>1</div>
-          <div style={stepConnectorStyle} />
-        </div>
-        <div style={stepContainerStyle}>
-          <div style={stepCircleStyle(false)}>2</div>
-          <div style={stepConnectorStyle} />
-        </div>
-        <div style={stepContainerStyle}>
-          <div style={stepCircleStyle(false)}>3</div>
+      <div className="card" style={{ padding: '0.875rem 1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+          {steps.map((step, idx) => (
+            <React.Fragment key={step.num}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                <div
+                  className="tabular-nums"
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: 'var(--radius-full)',
+                    border: step.active ? '1px solid var(--primary)' : '1px solid var(--border-strong)',
+                    backgroundColor: step.active ? 'var(--primary)' : 'var(--bg-secondary)',
+                    color: step.active ? '#ffffff' : 'var(--text-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: 600
+                  }}
+                >
+                  {step.num}
+                </div>
+                <span style={{ fontSize: '0.8125rem', fontWeight: step.active ? 600 : 500, color: step.active ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                  {step.label}
+                </span>
+              </div>
+              {idx < steps.length - 1 && (
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
       {/* Main Form Content - Two Columns */}
-      <div style={twoColGridStyle}>
-        
-        {/* Left Column */}
-        <div style={colStyle}>
-          <div className="form-group">
-            <label style={labelStyle}>RFQ's title*</label>
-            <input 
-              type="text" 
-              name="title"
-              placeholder="Office Furniture procurement Q2"
-              className="form-control"
-              value={rfqDetails.title}
-              onChange={handleDetailChange}
-              style={inputStyle}
-            />
-          </div>
-
-          <div className="form-group">
-            <label style={labelStyle}>Category</label>
-            <input 
-              type="text" 
-              name="category"
-              placeholder="Furniture"
-              className="form-control"
-              value={rfqDetails.category}
-              onChange={handleDetailChange}
-              style={inputStyle}
-            />
-          </div>
-
-          <div className="form-group">
-            <label style={labelStyle}>Deadline*</label>
-            <input 
-              type="text" 
-              name="deadline"
-              placeholder="15 June 2025"
-              className="form-control"
-              value={rfqDetails.deadline}
-              onChange={handleDetailChange}
-              style={inputStyle}
-            />
-          </div>
-
-          <div className="form-group">
-            <label style={labelStyle}>Description</label>
-            <textarea 
-              name="description"
-              placeholder="Ergonomic chairs and standing desks for 3rd floor"
-              className="form-control"
-              value={rfqDetails.description}
-              onChange={handleDetailChange}
-              rows={3}
-              style={{...inputStyle, resize: 'none'}}
-            />
-          </div>
-
-          <hr style={dividerStyle} />
-
-          <div style={leftButtonsContainerStyle}>
-            <button className="btn btn-outline" style={bottomButtonStyle} onClick={() => handleDispatch('Active')}>
-              Save & Send to Vendors
-            </button>
-            <button className="btn btn-outline" style={bottomButtonStyle} onClick={() => handleDispatch('Draft')}>
-              Save as Draft
-            </button>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div style={colStyle}>
-          
-          <div style={sectionContainerStyle}>
-            <h3 style={sectionTitleStyle}>Line items</h3>
-            <div className="table-responsive" style={tableWrapperStyle}>
-              <table className="custom-table" style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th>item</th>
-                    <th>qty</th>
-                    <th>Unit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item, index) => (
-                    <tr key={item.id}>
-                      <td>
-                        <input 
-                          type="text" 
-                          className="form-control"
-                          value={item.item_name}
-                          onChange={e => handleItemChange(index, 'item_name', e.target.value)}
-                          style={tableInputStyle}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="number" 
-                          className="form-control"
-                          value={item.quantity}
-                          onChange={e => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
-                          style={tableInputStyle}
-                        />
-                      </td>
-                      <td>
-                        <input 
-                          type="text" 
-                          className="form-control"
-                          value={item.unit}
-                          onChange={e => handleItemChange(index, 'unit', e.target.value)}
-                          style={tableInputStyle}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <div className="card" style={{ padding: '1.5rem' }}>
+        <div className="rfq-split">
+          {/* Left Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <div className="form-group">
+              <label htmlFor="rfq-title">RFQ Title *</label>
+              <input
+                id="rfq-title"
+                type="text"
+                name="title"
+                placeholder="e.g. Office Furniture Procurement Q2"
+                className="form-control"
+                value={rfqDetails.title}
+                onChange={handleDetailChange}
+              />
             </div>
-            <button onClick={addLineItem} className="btn btn-outline" style={smallButtonStyle}>
-              + add line item
-            </button>
+
+            <div className="form-group">
+              <label htmlFor="rfq-category">Category</label>
+              <input
+                id="rfq-category"
+                type="text"
+                name="category"
+                placeholder="Furniture"
+                className="form-control"
+                value={rfqDetails.category}
+                onChange={handleDetailChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="rfq-deadline">Submission Deadline *</label>
+              <input
+                id="rfq-deadline"
+                type="text"
+                name="deadline"
+                placeholder="15 June 2025"
+                className="form-control"
+                value={rfqDetails.deadline}
+                onChange={handleDetailChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="rfq-desc">Description</label>
+              <textarea
+                id="rfq-desc"
+                name="description"
+                placeholder="Ergonomic chairs and standing desks for 3rd floor"
+                className="form-control"
+                value={rfqDetails.description}
+                onChange={handleDetailChange}
+                rows={4}
+              />
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '0.5rem', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.625rem', maxWidth: '280px' }}>
+              <button type="button" className="btn btn-primary" onClick={() => handleDispatch('Active')}>
+                Save &amp; Send to Vendors
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => handleDispatch('Draft')}>
+                Save as Draft
+              </button>
+            </div>
           </div>
 
-          <div style={sectionContainerStyle}>
-            <h3 style={sectionTitleStyle}>ASSIGN VENDORS</h3>
-            <div style={assignedVendorsBoxStyle}>
-              {assignedVendors.length > 0 ? assignedVendors.map(vendor => (
-                <div key={vendor.id} style={assignedVendorTagStyle}>
-                  {vendor.name}
-                  <button
-                    type="button"
-                    style={tagRemoveBtnStyle}
-                    onClick={() => toggleVendorSelection(vendor.id)}
-                    aria-label={`Remove ${vendor.name}`}
-                  >
-                    <X size={12} />
-                  </button>
+          {/* Right Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Line Items */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 className="section-eyebrow">Line Items</h2>
+                <button type="button" onClick={addLineItem} className="btn btn-secondary btn-sm">
+                  <Plus size={13} />
+                  <span>Add Line Item</span>
+                </button>
+              </div>
+
+              <div className="card-flush">
+                <div className="table-responsive">
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th style={{ width: '90px' }}>Qty</th>
+                        <th style={{ width: '90px' }}>Unit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lineItems.map((item, index) => (
+                        <tr key={item.id}>
+                          <td style={{ padding: '0.45rem 0.625rem' }}>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={item.item_name}
+                              placeholder="Item description"
+                              onChange={e => handleItemChange(index, 'item_name', e.target.value)}
+                              style={{ minHeight: '32px', padding: '0.3rem 0.5rem' }}
+                            />
+                          </td>
+                          <td style={{ padding: '0.45rem 0.625rem' }}>
+                            <input
+                              type="number"
+                              className="form-control tabular-nums"
+                              value={item.quantity}
+                              onChange={e => handleItemChange(index, 'quantity', parseInt(e.target.value, 10) || 0)}
+                              style={{ minHeight: '32px', padding: '0.3rem 0.5rem' }}
+                            />
+                          </td>
+                          <td style={{ padding: '0.45rem 0.625rem' }}>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={item.unit}
+                              onChange={e => handleItemChange(index, 'unit', e.target.value)}
+                              style={{ minHeight: '32px', padding: '0.3rem 0.5rem' }}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )) : (
-                <div style={emptyVendorStyle}>No vendors assigned yet.</div>
-              )}
+              </div>
             </div>
-            <button
-              type="button"
-              className="btn btn-outline"
-              style={{...smallButtonStyle, marginTop: '0.5rem', width: '100%', textAlign: 'left', display: 'block', border: '1px solid var(--text-secondary)'}}
-              onClick={addNextVendor}
-            >
-              + add vendor
-            </button>
-          </div>
 
-          <div style={sectionContainerStyle}>
-            <h3 style={sectionTitleStyle}>Attchements</h3>
-            <div style={attachmentBoxStyle}>
-              Drag & drop files or click to upload
+            {/* Assign Vendors */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <h2 className="section-eyebrow">Assign Vendors</h2>
+              <div style={assignedVendorsBoxStyle}>
+                {assignedVendors.length > 0 ? assignedVendors.map(vendor => (
+                  <div key={vendor.id} style={assignedVendorTagStyle}>
+                    <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{vendor.name}</span>
+                    <button
+                      type="button"
+                      style={tagRemoveBtnStyle}
+                      onClick={() => toggleVendorSelection(vendor.id)}
+                      aria-label={`Remove ${vendor.name}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                    No vendors assigned yet.
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ width: 'fit-content' }}
+                onClick={addNextVendor}
+              >
+                <Plus size={13} />
+                <span>Add Vendor</span>
+              </button>
+            </div>
+
+            {/* Attachments */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <h2 className="section-eyebrow">Attachments</h2>
+              <div style={attachmentBoxStyle}>
+                <Upload size={18} color="var(--text-muted)" />
+                <span style={{ fontSize: '0.84375rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                  Drag &amp; drop specification files or click to upload
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  PDF, XLSX, or DOCX up to 10 MB
+                </span>
+              </div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
 };
 
-/* Styles */
-const wrapperStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
-  padding: '1rem 0'
-};
-
-const headerStyle = {
-  marginBottom: '0.5rem'
-};
-
-const stepsIndicatorContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: '2.5rem',
-  padding: '0 1rem'
-};
-
-const stepContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  flex: 1
-};
-
-const stepCircleStyle = (isActive) => ({
-  width: '32px',
-  height: '32px',
-  borderRadius: '50%',
-  border: '1px solid var(--text-primary)',
-  backgroundColor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontWeight: '600',
-  fontSize: '1rem',
-  color: 'var(--text-primary)'
-});
-
-const stepConnectorStyle = {
-  flex: 1,
-  height: '1px',
-  backgroundColor: 'var(--text-primary)',
-  margin: '0 1rem'
-};
-
-const twoColGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '4rem',
-  paddingLeft: '1rem'
-};
-
-const colStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.25rem'
-};
-
-const labelStyle = {
-  fontSize: '0.9rem',
-  fontWeight: '500',
-  marginBottom: '0.5rem',
-  display: 'block'
-};
-
-const inputStyle = {
-  backgroundColor: 'transparent',
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-md)',
-  padding: '0.6rem 1rem',
-  color: 'var(--text-primary)',
-  width: '100%',
-  fontFamily: 'inherit'
-};
-
-const dividerStyle = {
-  borderColor: 'var(--text-secondary)',
-  opacity: 0.3,
-  margin: '1.5rem 0'
-};
-
-const leftButtonsContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.75rem',
-  width: '60%'
-};
-
-const bottomButtonStyle = {
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-md)',
-  backgroundColor: 'transparent',
-  color: 'var(--text-primary)',
-  padding: '0.6rem 1rem',
-  textAlign: 'center',
-  fontWeight: '500'
-};
-
-const sectionContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.75rem',
-  marginBottom: '0.5rem'
-};
-
-const sectionTitleStyle = {
-  fontSize: '0.9rem',
-  fontWeight: '500',
-  textTransform: 'uppercase'
-};
-
-const tableWrapperStyle = {
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-md)',
-  overflow: 'hidden'
-};
-
-const tableStyle = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  textAlign: 'left'
-};
-
-const tableInputStyle = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-primary)',
-  width: '100%',
-  outline: 'none',
-  padding: '0'
-};
-
-const smallButtonStyle = {
-  border: '1px solid var(--text-primary)',
-  borderRadius: 'var(--radius-full)',
-  backgroundColor: 'transparent',
-  color: 'var(--text-primary)',
-  padding: '0.4rem 1rem',
-  fontSize: '0.85rem',
-  width: 'max-content'
-};
-
 const assignedVendorsBoxStyle = {
-  border: '1px solid var(--text-primary)',
+  border: '1px solid var(--border-color)',
+  backgroundColor: 'var(--bg-primary)',
   borderRadius: 'var(--radius-md)',
   padding: '0.75rem',
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.5rem'
+  gap: '0.5rem',
+  minHeight: '56px'
 };
 
 const assignedVendorTagStyle = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  fontSize: '0.9rem'
-};
-
-const emptyVendorStyle = {
-  color: 'var(--text-secondary)',
-  fontSize: '0.85rem'
+  fontSize: '0.84375rem',
+  backgroundColor: 'var(--bg-secondary)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '0.4rem 0.65rem'
 };
 
 const tagRemoveBtnStyle = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-primary)',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center'
+  color: 'var(--text-muted)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '2px',
+  borderRadius: 'var(--radius-sm)'
 };
 
 const attachmentBoxStyle = {
-  border: '1px solid var(--text-primary)',
+  border: '1px dashed var(--border-strong)',
   borderRadius: 'var(--radius-md)',
-  padding: '2.5rem 1rem',
-  textAlign: 'center',
-  fontSize: '0.9rem',
-  color: 'var(--text-primary)'
+  backgroundColor: 'var(--bg-primary)',
+  padding: '1.75rem 1rem',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '0.35rem',
+  textAlign: 'center'
 };
 
 export default CreateRFQ;

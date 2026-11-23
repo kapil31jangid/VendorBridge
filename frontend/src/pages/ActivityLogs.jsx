@@ -1,141 +1,142 @@
-import React, { useState, useContext } from 'react';
+import { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { ShieldCheck, History, Search, Calendar, User, Info } from 'lucide-react';
+import { CheckCircle2, Clock, FileText, User, History } from 'lucide-react';
+
+const FILTER_TABS = ['All', 'RFQ', 'Approvals', 'Invoices', 'Vendors'];
+
+const matchesFilter = (category, activeFilter) => {
+  if (activeFilter === 'All') return true;
+  const cat = String(category || '').toLowerCase();
+  const filter = activeFilter.toLowerCase();
+  if (filter === 'approvals') return cat === 'approval' || cat === 'approvals';
+  if (filter === 'invoices') return cat === 'invoice' || cat === 'invoices' || cat === 'po';
+  if (filter === 'vendors') return cat === 'vendor' || cat === 'vendors';
+  return cat === filter;
+};
 
 const ActivityLogs = () => {
-  const { activityLogs, users } = useContext(AppContext);
+  const { activityLogs } = useContext(AppContext);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const getUserName = (userId) => {
-    const u = users.find(item => item.id === userId);
-    return u ? `${u.first_name} ${u.last_name} (${u.role})` : 'System Dispatcher';
-  };
-
-  // Filtering logs
-  const filteredLogs = activityLogs.filter(log => {
-    if (activeFilter === 'All') return true;
-    return String(log.category || '').toLowerCase() === activeFilter.toLowerCase();
-  });
-
-  const getBadgeClass = (category) => {
-    const cat = String(category || '').toLowerCase();
-    if (cat === 'auth') return 'badge-warning';
-    if (cat === 'rfq') return 'badge-info';
-    if (cat === 'approval') return 'badge-success';
-    if (cat === 'invoice' || cat === 'po') return 'badge-success';
-    return 'badge-secondary';
-  };
+  const filteredLogs = activityLogs.filter(log => matchesFilter(log.category, activeFilter));
 
   return (
-    <div style={wrapperStyle}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Page Header */}
-      <div>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Activity and logs</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginTop: '0.4rem' }}>Procurement audit trail</p>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Activity &amp; Logs</h1>
+          <p className="page-subtitle">Immutable procurement audit trail across RFQs, approvals, invoices, and vendors</p>
+        </div>
       </div>
 
       {/* Filter Tabs */}
-      <div style={tabContainerStyle}>
-        {['All', 'RFQ', 'Approvals', 'Invoices', 'Vendors'].map(tab => (
+      <div className="tab-bar" role="tablist">
+        {FILTER_TABS.map(tab => (
           <button
             key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeFilter === tab}
             onClick={() => setActiveFilter(tab)}
-            style={activeFilter === tab ? activeTabStyle : tabStyle}
+            className={`tab-btn${activeFilter === tab ? ' active' : ''}`}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {/* Logs List */}
-      <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1rem' }}>
+      {/* Audit Trail List */}
+      <div className="card-flush">
         {filteredLogs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-            <History size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-            <p>No audit trail records match this category.</p>
+          <div className="empty-state">
+            <History size={28} color="var(--text-muted)" />
+            <div className="empty-state-title">No audit records</div>
+            <div className="empty-state-desc">No activity logs match the selected category.</div>
           </div>
         ) : (
-          filteredLogs.map((log, idx) => {
-            const isLast = idx === filteredLogs.length - 1;
-            
-            // Wireframe matching icons based on hardcoded examples or categories
-            let IconComp = History;
-            let iconColor = 'var(--text-primary)';
-            const actionText = String(log.action || '').toLowerCase();
-            const category = String(log.category || '');
-            const action = String(log.action || 'Activity recorded');
-            const details = String(log.details || '');
-            const timestamp = log.timestamp || log.created_at || new Date().toISOString();
-            
-            if (actionText.includes('selected') || category === 'Approval' && action.includes('Approved')) {
-              IconComp = ShieldCheck;
-              iconColor = '#14b8a6'; // green
-            } else if (actionText.includes('pending') || actionText.includes('awaiting')) {
-              IconComp = History; // clock-like
-              iconColor = '#3b82f6'; // blue
-            } else if (actionText.includes('published') || category === 'RFQ') {
-              IconComp = Info; // document-like
-              iconColor = '#f59e0b'; // orange/white
-            } else if (actionText.includes('added') || actionText.includes('registered') || category === 'Vendor') {
-              IconComp = User;
-              iconColor = '#ec4899'; // pink
-            }
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {filteredLogs.map((log, idx) => {
+              const isLast = idx === filteredLogs.length - 1;
+              const action = String(log.action || 'Activity recorded');
+              const actionLower = action.toLowerCase();
+              const category = String(log.category || 'System');
+              const details = String(log.details || '');
+              const timestamp = log.timestamp || log.created_at || new Date().toISOString();
 
-            return (
-              <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem 0', borderBottom: isLast ? 'none' : '1px solid var(--border-color)' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: `1px solid ${iconColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <IconComp size={18} color={iconColor} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                    {action} {details ? `- ${details.toLowerCase()}` : ''}
+              let IconComp = History;
+              let tone = { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: 'var(--border-color)' };
+
+              if (actionLower.includes('selected') || actionLower.includes('approved') || actionLower.includes('paid')) {
+                IconComp = CheckCircle2;
+                tone = { bg: 'var(--color-success-bg)', color: 'var(--color-success)', border: 'var(--color-success-border)' };
+              } else if (actionLower.includes('pending') || actionLower.includes('awaiting')) {
+                IconComp = Clock;
+                tone = { bg: 'var(--color-info-bg)', color: 'var(--color-info)', border: 'var(--color-info-border)' };
+              } else if (actionLower.includes('published') || category.toLowerCase() === 'rfq') {
+                IconComp = FileText;
+                tone = { bg: 'var(--color-warning-bg)', color: 'var(--color-warning)', border: 'var(--color-warning-border)' };
+              } else if (actionLower.includes('added') || actionLower.includes('registered') || category.toLowerCase().startsWith('vendor')) {
+                IconComp = User;
+                tone = { bg: 'var(--accent-teal-subtle)', color: 'var(--accent-teal)', border: 'var(--accent-teal-border)' };
+              }
+
+              return (
+                <div
+                  key={log.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem 1.25rem',
+                    borderBottom: isLast ? 'none' : '1px solid var(--border-color)'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: 'var(--radius-full)',
+                      backgroundColor: tone.bg,
+                      border: `1px solid ${tone.border}`,
+                      color: tone.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <IconComp size={15} />
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {new Date(timestamp).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                      <strong style={{ fontWeight: 600 }}>{action}</strong>
+                      {details && <span style={{ color: 'var(--text-secondary)' }}> — {details}</span>}
+                    </div>
+                    <div className="tabular-nums" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      {new Date(timestamp).toLocaleString('en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </div>
                   </div>
+
+                  <span className="badge badge-neutral" style={{ flexShrink: 0 }}>
+                    {category}
+                  </span>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
   );
-};
-
-/* Styles */
-const wrapperStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.5rem',
-  padding: '1rem 0'
-};
-
-const tabContainerStyle = {
-  display: 'flex',
-  gap: '1rem',
-  marginTop: '1rem'
-};
-
-const tabStyle = {
-  backgroundColor: 'transparent',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'var(--text-primary)',
-  padding: '0.4rem 1.5rem',
-  cursor: 'pointer',
-  color: 'var(--text-primary)',
-  fontSize: '0.85rem',
-  fontWeight: '500',
-  borderRadius: 'var(--radius-md)',
-  outline: 'none'
-};
-
-const activeTabStyle = {
-  ...tabStyle,
-  backgroundColor: 'rgba(59, 130, 246, 0.2)',
-  borderColor: '#3b82f6',
-  color: '#3b82f6'
 };
 
 export default ActivityLogs;
