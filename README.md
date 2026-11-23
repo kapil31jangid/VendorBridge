@@ -20,7 +20,7 @@ Experience VendorBridge — a connected procurement platform bringing
 vendor management, RFQs, quotations, approvals, purchase orders,
 and invoices into one streamlined workflow.
 
-GITHUB_VIDEO_ASSET_URL_PLACEHOLDER
+https://github.com/user-attachments/assets/633b645f-7df8-4565-9f47-97cf75c02e20
 
 ---
 
