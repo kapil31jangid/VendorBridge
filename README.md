@@ -22,7 +22,6 @@ and invoices into one streamlined workflow.
 
 GITHUB_VIDEO_ASSET_URL_PLACEHOLDER
 
-
 ---
 
 ## Table of Contents
